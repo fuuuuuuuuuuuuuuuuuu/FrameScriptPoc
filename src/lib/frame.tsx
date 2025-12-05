@@ -1,6 +1,6 @@
 import React, { useContext, useState } from "react"
 import { PROJECT_SETTINGS } from "../../project/project"
-import { useClipContext as useClipStart } from "./clip"
+import { useClipStart as useClipStart } from "./clip"
 
 type CurrentFrame = {
   currentFrame: number

@@ -20,6 +20,11 @@ export const Clip = ({ start, end, label, children }: ClipProps) => {
   const id = useId()
   const isVisible = useClipVisibility(id)
 
+  const clipContext = useContext(ClipContext)
+  if (clipContext) {
+    throw new Error("<Clip> must not be nested")
+  }
+
   useEffect(() => {
     if (registerClip && unregisterClip) {
       registerClip({ id, start, end, label })
@@ -47,7 +52,7 @@ export const Clip = ({ start, end, label, children }: ClipProps) => {
   )
 }
 
-export const useClipContext = () => {
+export const useClipStart = () => {
   const ctx = useContext(ClipContext)
   if (!ctx) throw new Error("useClipContext must be used inside <ClipContext>")
   return ctx.clipStart

@@ -343,6 +343,8 @@ export const TimelineUI = () => {
                 const width = Math.max(0, (clip.end - clip.start + 1) * pxPerFrame)
                 const label = clip.label ?? `Clip ${idx + 1}`
                 const visible = !hiddenMap[clip.id]
+                const isActive = safeCurrentFrame >= clip.start && safeCurrentFrame <= clip.end
+                const relativeFrame = safeCurrentFrame - clip.start
 
                 return (
                   <div
@@ -370,6 +372,25 @@ export const TimelineUI = () => {
                     <span style={{ fontSize: 12, opacity: 0.8 }}>
                       {formatSeconds(clip.start)}s – {formatSeconds(clip.end)}s
                     </span>
+                    {isActive ? (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          padding: "2px 6px",
+                          borderRadius: 6,
+                          background: visible ? "rgba(15,23,42,0.7)" : "rgba(15,23,42,0.4)",
+                          color: visible ? "#f8fafc" : "#cbd5e1",
+                          border: "1px solid #1f2937",
+                          width: 20,
+                          textAlign: "right",
+                          fontSize: 11,
+                          lineHeight: 1.3,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {relativeFrame}f
+                      </span>
+                    ) : null}
                   </div>
                 )
               })}
