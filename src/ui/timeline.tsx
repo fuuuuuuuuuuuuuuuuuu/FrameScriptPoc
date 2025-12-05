@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { TimelineClip } from "../lib/timeline"
 import { useTimelineClips } from "../lib/timeline"
 import { useCurrentFrame, useSetCurrentFrame } from "../lib/frame"
 import { PROJECT_SETTINGS } from "../../project/project"
+import { TransportControls } from "./transport"
 
 type PositionedClip = TimelineClip & { trackIndex: number }
 
@@ -81,6 +82,21 @@ export const TimelineUI = () => {
     [updateFromClientX],
   )
 
+  useEffect(() => {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+    const viewport = scroller.clientWidth
+    const margin = Math.min(200, viewport / 3)
+    const left = scroller.scrollLeft
+    const right = left + viewport
+    const pos = playheadPositionPx
+
+    if (pos < left + margin || pos > right - margin) {
+      const target = Math.max(0, Math.min(contentWidth - viewport, pos - viewport / 2))
+      scroller.scrollTo({ left: target, behavior: "smooth" })
+    }
+  }, [playheadPositionPx, contentWidth])
+
   const formatSeconds = useCallback(
     (frame: number) => (frame / fps).toFixed(2),
     [fps],
@@ -88,11 +104,32 @@ export const TimelineUI = () => {
 
   const laneHeight = 28
   const laneGap = 6
+  const scrollbarStyles = `
+  .fs-scroll {
+    scrollbar-color: #334155 #0f172a;
+  }
+  .fs-scroll::-webkit-scrollbar {
+    height: 10px;
+  }
+  .fs-scroll::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 999px;
+  }
+  .fs-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #1f2937, #334155);
+    border-radius: 999px;
+    border: 2px solid #0f172a;
+  }
+  .fs-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #2b384c, #4b5563);
+  }
+  `
 
   return (
     <div style={{ background: "#0f0f12", border: "1px solid #27272a", borderRadius: 8, padding: 12, color: "#e5e7eb" }}>
+      <style>{scrollbarStyles}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 320px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 300px", minWidth: 260 }}>
           <label style={{ fontSize: 12, color: "#cbd5e1", minWidth: 46 }}>Scale</label>
           <input
             type="range"
@@ -105,14 +142,19 @@ export const TimelineUI = () => {
           />
           <div style={{ width: 64, fontSize: 12, textAlign: "right", color: "#e5e7eb" }}>{Math.round(zoom * 100)}%</div>
         </div>
-        <div style={{ fontSize: 12, lineHeight: 1.3, minWidth: 140, textAlign: "right" }}>
+
+        <div style={{ flex: "0 0 auto" }}>
+          <TransportControls />
+        </div>
+
+        <div style={{ fontSize: 12, lineHeight: 1.3, minWidth: 140, textAlign: "right", marginLeft: "auto" }}>
           <div>Frame: {safeCurrentFrame}</div>
           <div>Time: {formatSeconds(safeCurrentFrame)}s</div>
           <div>Duration: {formatSeconds(durationInFrames)}s</div>
         </div>
       </div>
 
-      <div ref={scrollerRef} style={{ background: "#111", borderRadius: 6, border: "1px solid #27272a", padding: "8px 8px 12px", overflowX: "auto" }}>
+      <div ref={scrollerRef} className="fs-scroll" style={{ background: "#111", borderRadius: 6, border: "1px solid #27272a", padding: "8px 8px 12px", overflowX: "auto" }}>
         <div style={{ minWidth: contentWidth }}>
           <div
             ref={scrubRef}
