@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PROJECT, PROJECT_SETTINGS } from "../project/project";
 import { WithCurrentFrame } from "./lib/frame"
 import { TimelineUI } from "./ui/timeline";
@@ -20,6 +20,7 @@ export const StudioApp = () => {
   const previewMinWidth = 320;
   const previewMinHeight = previewMinWidth * previewAspectValue;
   const timelineMinHeight = 200;
+  const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -41,9 +42,18 @@ export const StudioApp = () => {
     const top = topRef.current;
     if (!top) return;
     const rect = top.getBoundingClientRect();
-    const ratio = clamp((clientX - rect.left) / rect.width, 0.2, 0.6);
+
+    const minLeftPx = 220;
+    const minRightPx = previewMinWidth;
+    const raw = (clientX - rect.left) / rect.width;
+    const minRatio = Math.max(0, minLeftPx / rect.width);
+    const maxRatio = Math.min(1, 1 - minRightPx / rect.width);
+    const safeMin = Math.min(minRatio, maxRatio - 0.05);
+    const safeMax = Math.max(maxRatio, safeMin + 0.05);
+
+    const ratio = clamp(raw, safeMin, safeMax);
     setHorizontalRatio(ratio);
-  }, []);
+  }, [previewMinWidth]);
 
   const startVerticalDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -66,6 +76,34 @@ export const StudioApp = () => {
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   }, [onHorizontalDrag]);
+
+  useEffect(() => {
+    const target = previewRef.current;
+    if (!target) return;
+
+    const update = (width: number, height: number) => {
+      const aspect = previewAspectValue;
+      let w = width;
+      let h = width * aspect;
+      if (h > height) {
+        h = height;
+        w = height / aspect;
+      }
+      setPreviewSize({ width: w, height: h });
+    };
+
+    const rect = target.getBoundingClientRect();
+    update(rect.width, rect.height);
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        update(width, height);
+      }
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [previewAspectValue]);
 
   return (
     <WithCurrentFrame>
@@ -92,11 +130,10 @@ export const StudioApp = () => {
               flexBasis: `${verticalRatio * 100}%`,
               minHeight: 240,
               maxHeight: "80%",
-              maxWidth: 1400,
               minWidth: 0,
             }}
           >
-            <div style={{ flexBasis: `${horizontalRatio * 100}%`, minWidth: 220, maxWidth: 500 }}>
+            <div style={{ flexBasis: `${horizontalRatio * 100}%`, minWidth: 220 }}>
               <ClipVisibilityPanel />
             </div>
             <div
@@ -109,26 +146,22 @@ export const StudioApp = () => {
                 flexShrink: 0,
               }}
             />
-            <div style={{ flex: 1, minWidth: 320, maxWidth: 1000, display: "flex", alignItems: "center", justifyContent: "center", minHeight: previewMinHeight, position: "relative" }}>
+            <div style={{ flex: 1, minWidth: 320, display: "flex", alignItems: "center", justifyContent: "center", minHeight: previewMinHeight, position: "relative" }}>
               <div
                 ref={previewRef}
                 style={{
                   width: "100%",
                   height: "100%",
-                  maxWidth: "100%",
-                  maxHeight: "100%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: 4,
                   boxSizing: "border-box",
                 }}
               >
                 <div
                   style={{
-                    width: "100%",
-                    maxWidth: "100%",
-                    maxHeight: "100%",
+                    width: previewSize.width || "100%",
+                    height: previewSize.height || "100%",
                     aspectRatio: previewAspect,
                     border: "1px solid #444",
                     borderRadius: 1,
