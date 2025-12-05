@@ -12,12 +12,13 @@ const stackClipsIntoTracks = (clips: TimelineClip[]): PositionedClip[] => {
   const trackEndFrames: number[] = []
 
   return sorted.map((clip) => {
+    const clipEndExclusive = clip.end + 1
     const trackIndex = trackEndFrames.findIndex((end) => end <= clip.start)
     if (trackIndex === -1) {
-      trackEndFrames.push(clip.end)
+      trackEndFrames.push(clipEndExclusive)
       return { ...clip, trackIndex: trackEndFrames.length - 1 }
     }
-    trackEndFrames[trackIndex] = clip.end
+    trackEndFrames[trackIndex] = clipEndExclusive
     return { ...clip, trackIndex }
   })
 }
@@ -34,7 +35,7 @@ export const TimelineUI = () => {
   const trackCount = Math.max(1, placedClips.reduce((max, clip) => Math.max(max, clip.trackIndex + 1), 0))
 
   const durationInFrames = useMemo(() => {
-    const maxClipEnd = placedClips.reduce((max, clip) => Math.max(max, clip.end), 0)
+    const maxClipEnd = placedClips.reduce((max, clip) => Math.max(max, clip.end + 1), 0)
     return Math.max(1, Math.round(fps * 5), maxClipEnd, currentFrame + 1)
   }, [placedClips, fps, currentFrame])
 
@@ -104,6 +105,30 @@ export const TimelineUI = () => {
 
   const laneHeight = 28
   const laneGap = 6
+  const scrubHeight = 16
+  const scrubGap = 8
+  const rulerHeight = 24
+  const rulerGap = 8
+  const pxPerSecond = pxPerFrame * fps
+  const ticks = useMemo(() => {
+    const targetSpacingPx = 120
+    const candidateSeconds = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300]
+    const intervalSeconds = candidateSeconds.find((s) => s * pxPerSecond >= targetSpacingPx) ?? candidateSeconds[candidateSeconds.length - 1]
+    const intervalFrames = Math.max(1, Math.round(intervalSeconds * fps))
+    const result: { frame: number; px: number; label: string }[] = []
+    for (let frame = 0; frame <= durationInFrames; frame += intervalFrames) {
+      const seconds = frame / fps
+      result.push({
+        frame,
+        px: frame * pxPerFrame,
+        label: seconds >= 60 ? `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(1).padStart(4, "0")}` : `${seconds.toFixed(1)}s`,
+      })
+    }
+    return result
+  }, [durationInFrames, fps, pxPerFrame, pxPerSecond])
+  const trackAreaHeight = trackCount * laneHeight + (trackCount - 1) * laneGap + 16
+  const trackTop = scrubHeight + scrubGap + rulerHeight + rulerGap
+  const containerHeight = trackTop + trackAreaHeight
   const scrollbarStyles = `
   .fs-scroll {
     scrollbar-color: #334155 #0f172a;
@@ -182,35 +207,35 @@ export const TimelineUI = () => {
               top: 8,
               left: 8,
               right: 8,
-              bottom: 12,
+            bottom: 12,
+            width: contentWidth,
+            minWidth: contentWidth,
+            height: containerHeight,
+          }}
+        >
+          <div
+            style={{
+              position: "sticky",
+              top: 0,
+              left: 0,
               width: contentWidth,
-              minWidth: contentWidth,
-              height: trackCount * laneHeight + (trackCount - 1) * laneGap + 100,
+              height: scrubHeight,
+              marginBottom: scrubGap,
+              cursor: "ew-resize",
+              userSelect: "none",
             }}
-          >
-            <div
-              style={{
-                position: "sticky",
-                top: 0,
-                left: 0,
-                width: contentWidth,
-                height: 16,
-                marginBottom: 8,
-                cursor: "ew-resize",
-                userSelect: "none",
-              }}
-              ref={scrubRef}
-              onPointerDown={handlePointerDown}
+            ref={scrubRef}
+            onPointerDown={handlePointerDown}
             >
               <div
                 style={{
-                  position: "absolute",
-                  top: 8,
-                  left: 0,
-                  right: 0,
-                  height: 4,
-                  borderRadius: 999,
-                  background: "linear-gradient(90deg, #334155, #1e293b)",
+                position: "absolute",
+                top: 8,
+                left: 0,
+                right: 0,
+                height: 4,
+                borderRadius: 999,
+                background: "linear-gradient(90deg, #334155, #1e293b)",
                 }}
               />
               <div
@@ -232,10 +257,66 @@ export const TimelineUI = () => {
             <div
               style={{
                 position: "absolute",
-                top: 24,
+                top: scrubHeight + scrubGap,
+                left: 0,
+                right: 0,
+                height: rulerHeight,
+                background: "#0f172a",
+                borderRadius: 4,
+                border: "1px solid #1f2937",
+                boxSizing: "border-box",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: rulerHeight - 1,
+                  left: 0,
+                  right: 0,
+                  height: 1,
+                  background: "#1f2937",
+                }}
+              />
+              {ticks.map((tick) => (
+                <div key={tick.frame} style={{ position: "absolute", left: tick.px, top: 0, width: 1, height: rulerHeight, background: "#334155" }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 0,
+                      transform: "translateX(-50%)",
+                      fontSize: 10,
+                      color: "#cbd5e1",
+                      whiteSpace: "nowrap",
+                      background: "rgba(15,15,18,0.8)",
+                      padding: "0 4px",
+                      borderRadius: 3,
+                      border: "1px solid #1f2937",
+                    }}
+                  >
+                    {tick.label}
+                  </div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      width: 1,
+                      height: 8,
+                      background: "#475569",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                position: "absolute",
+                top: trackTop,
                 left: 0,
                 width: contentWidth,
-                height: trackCount * laneHeight + (trackCount - 1) * laneGap + 16,
+                height: trackAreaHeight,
                 background: "#18181b",
                 borderRadius: 6,
                 border: "1px solid #27272a",
@@ -258,7 +339,7 @@ export const TimelineUI = () => {
 
               {placedClips.map((clip, idx) => {
                 const left = clip.start * pxPerFrame
-                const width = Math.max(0, (clip.end - clip.start) * pxPerFrame)
+                const width = Math.max(0, (clip.end - clip.start + 1) * pxPerFrame)
                 const label = clip.label ?? `Clip ${idx + 1}`
 
                 return (

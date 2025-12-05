@@ -30,7 +30,7 @@ export const Clip = ({ start, end, label, children }: ClipProps) => {
     return () => unregisterClipGlobal(id)
   }, [registerClip, unregisterClip, id, start, end, label])
 
-  if (currentFrame < start || currentFrame >= end) {
+  if (currentFrame < start || currentFrame > end) {
     return null;
   }
 
