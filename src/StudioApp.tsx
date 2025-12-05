@@ -1,48 +1,28 @@
 import { PROJECT } from "../project/project";
-import { useCurrentFrame, useSetCurrentFrame, WithCurrentFrame } from "./lib/frame"
-
-const SeekBar: React.FC = () => {
-  const currentFrame = useCurrentFrame();
-  const setCurrentFrame = useSetCurrentFrame();
-
-  // 仮の最大フレーム数（本当は PROJECT のメタデータから持ってくるのが理想）
-  const maxFrame = 300;
-
-  return (
-    <div style={{ margin: "16px 0" }}>
-      <input
-        type="range"
-        min={0}
-        max={maxFrame}
-        value={currentFrame}
-        onChange={(e) => setCurrentFrame(Number(e.target.value))}
-        style={{ width: 640 }}
-      />
-      <div style={{ color: "#aaa", marginTop: 4 }}>
-        frame: {currentFrame} / {maxFrame}
-      </div>
-    </div>
-  );
-};
+import { WithCurrentFrame } from "./lib/frame"
+import { TimelineUI } from "./ui/timeline";
 
 export const StudioApp = () => {
   return (
     <WithCurrentFrame>
       <div style={{ padding: 16 }}>
         <h1>FrameScript Studio</h1>
-        <div
-          style={{
-            width: 640,
-            height: 360,
-            border: "1px solid #444",
-            borderRadius: 1,
-            overflow: "hidden",
-            backgroundColor: "#000",
-          }}
-        >
-          <PROJECT />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 960 }}>
+          <div
+            style={{
+              width: 640,
+              height: 360,
+              border: "1px solid #444",
+              borderRadius: 1,
+              overflow: "hidden",
+              backgroundColor: "#000",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+            }}
+          >
+            <PROJECT />
+          </div>
+          <TimelineUI />
         </div>
-        <SeekBar />
       </div>
     </WithCurrentFrame>
   );

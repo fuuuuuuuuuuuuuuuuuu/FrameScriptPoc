@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react"
-import { useProjectSettings } from "./project"
+import { PROJECT_SETTINGS } from "../../project/project"
 
 type CurrentFrame = {
   currentFrame: number
@@ -31,6 +31,5 @@ export const useSetCurrentFrame = () => {
 }
 
 export function seconds(seconds: number): number {
-  const settings = useProjectSettings()
-  return settings.fps * seconds
+  return PROJECT_SETTINGS.fps * seconds
 }
