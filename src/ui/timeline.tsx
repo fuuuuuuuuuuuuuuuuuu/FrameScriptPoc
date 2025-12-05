@@ -28,7 +28,7 @@ export const TimelineUI = () => {
   const setCurrentFrame = useSetCurrentFrame()
   const projectSettings = PROJECT_SETTINGS
   const { fps } = projectSettings
-  const [zoom, setZoom] = useState(0.5)
+  const [zoom, setZoom] = useState(1)
 
   const placedClips = useMemo(() => stackClipsIntoTracks(clips), [clips])
   const trackCount = Math.max(1, placedClips.reduce((max, clip) => Math.max(max, clip.trackIndex + 1), 0))
@@ -109,7 +109,8 @@ export const TimelineUI = () => {
     scrollbar-color: #334155 #0f172a;
   }
   .fs-scroll::-webkit-scrollbar {
-    height: 10px;
+    height: 8px;
+    width: 8px;
   }
   .fs-scroll::-webkit-scrollbar-track {
     background: #0f172a;
@@ -126,10 +127,10 @@ export const TimelineUI = () => {
   `
 
   return (
-    <div style={{ background: "#0f0f12", border: "1px solid #27272a", borderRadius: 8, padding: 12, color: "#e5e7eb" }}>
+    <div style={{ background: "#0f0f12", border: "1px solid #27272a", borderRadius: 8, padding: 12, color: "#e5e7eb", height: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 12, minHeight: 0, width: "100%", maxWidth: "100%", minWidth: 0, overflow: "hidden" }}>
       <style>{scrollbarStyles}</style>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 300px", minWidth: 260 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: "0 0 220px", minWidth: 180, maxWidth: 240 }}>
           <label style={{ fontSize: 12, color: "#cbd5e1", minWidth: 46 }}>Scale</label>
           <input
             type="range"
@@ -138,7 +139,7 @@ export const TimelineUI = () => {
             step={0.05}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            style={{ flex: "1 1 auto" }}
+            style={{ flex: "1 1 auto", minWidth: 100 }}
           />
           <div style={{ width: 64, fontSize: 12, textAlign: "right", color: "#e5e7eb" }}>{Math.round(zoom * 100)}%</div>
         </div>
@@ -154,117 +155,153 @@ export const TimelineUI = () => {
         </div>
       </div>
 
-      <div ref={scrollerRef} className="fs-scroll" style={{ background: "#111", borderRadius: 6, border: "1px solid #27272a", padding: "8px 8px 12px", overflowX: "auto" }}>
-        <div style={{ minWidth: contentWidth }}>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", minWidth: 0 }}>
+        <div
+          ref={scrollerRef}
+          className="fs-scroll"
+          style={{
+            background: "#111",
+            borderRadius: 6,
+            border: "1px solid #27272a",
+            padding: "8px 8px 12px",
+            overflow: "auto",
+            flex: "1 1 0",
+            minHeight: 0,
+            minWidth: 0,
+            width: "100%",
+            height: "100%",
+            boxSizing: "border-box",
+            display: "block",
+            maxWidth: "100%",
+            position: "relative",
+          }}
+        >
           <div
-            ref={scrubRef}
-            onPointerDown={handlePointerDown}
             style={{
-              position: "relative",
+              position: "absolute",
+              top: 8,
+              left: 8,
+              right: 8,
+              bottom: 12,
               width: contentWidth,
-              height: 16,
-              marginBottom: 0,
-              cursor: "ew-resize",
-              userSelect: "none",
+              minWidth: contentWidth,
+              height: trackCount * laneHeight + (trackCount - 1) * laneGap + 100,
             }}
           >
             <div
               style={{
-                position: "absolute",
-                top: 8,
+                position: "sticky",
+                top: 0,
                 left: 0,
-                right: 0,
-                height: 4,
-                borderRadius: 999,
-                background: "linear-gradient(90deg, #334155, #1e293b)",
+                width: contentWidth,
+                height: 16,
+                marginBottom: 8,
+                cursor: "ew-resize",
+                userSelect: "none",
               }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                top: 2,
-                left: playheadPositionPx + 1.5,
-                width: 14,
-                height: 14,
-                background: "#f59e0b",
-                borderRadius: 4,
-                boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
-                transform: "translate(-50%, 0)",
-                pointerEvents: "none",
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              width: contentWidth,
-              height: trackCount * laneHeight + (trackCount - 1) * laneGap + 16,
-              background: "#18181b",
-              borderRadius: 6,
-              border: "1px solid #27272a",
-              overflow: "hidden",
-            }}
-          >
-            {[...Array(trackCount)].map((_, index) => (
+              ref={scrubRef}
+              onPointerDown={handlePointerDown}
+            >
               <div
-                key={index}
                 style={{
                   position: "absolute",
-                  top: index * (laneHeight + laneGap),
+                  top: 8,
                   left: 0,
                   right: 0,
-                  height: laneHeight,
-                  borderBottom: index === trackCount - 1 ? "none" : "1px dashed #2f3033",
+                  height: 4,
+                  borderRadius: 999,
+                  background: "linear-gradient(90deg, #334155, #1e293b)",
                 }}
               />
-            ))}
-
-            {placedClips.map((clip, idx) => {
-              const left = clip.start * pxPerFrame
-              const width = Math.max(0, (clip.end - clip.start) * pxPerFrame)
-              const label = clip.label ?? `Clip ${idx + 1}`
-
-              return (
-                <div
-                  key={clip.id}
-                  style={{
-                    position: "absolute",
-                    top: clip.trackIndex * (laneHeight + laneGap) + 4,
-                    left,
-                    width,
-                    height: laneHeight - 8,
-                    background: "linear-gradient(90deg, #2563eb, #22d3ee)",
-                    color: "#0b1221",
-                    borderRadius: 4,
-                    padding: "4px 8px",
-                    boxSizing: "border-box",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <span style={{ fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{label}</span>
-                  <span style={{ fontSize: 12, opacity: 0.8 }}>
-                    {formatSeconds(clip.start)}s – {formatSeconds(clip.end)}s
-                  </span>
-                </div>
-              )
-            })}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left: playheadPositionPx + 1.5,
+                  width: 14,
+                  height: 14,
+                  background: "#f59e0b",
+                  borderRadius: 4,
+                  boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+                  transform: "translate(-50%, 0)",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
 
             <div
               style={{
                 position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: playheadPositionPx,
-                width: 2,
-                background: "#f59e0b",
-                pointerEvents: "none",
+                top: 24,
+                left: 0,
+                width: contentWidth,
+                height: trackCount * laneHeight + (trackCount - 1) * laneGap + 16,
+                background: "#18181b",
+                borderRadius: 6,
+                border: "1px solid #27272a",
+                overflow: "hidden",
               }}
-            />
+            >
+              {[...Array(trackCount)].map((_, index) => (
+                <div
+                  key={index}
+                  style={{
+                    position: "absolute",
+                    top: index * (laneHeight + laneGap),
+                    left: 0,
+                    right: 0,
+                    height: laneHeight,
+                    borderBottom: index === trackCount - 1 ? "none" : "1px dashed #2f3033",
+                  }}
+                />
+              ))}
+
+              {placedClips.map((clip, idx) => {
+                const left = clip.start * pxPerFrame
+                const width = Math.max(0, (clip.end - clip.start) * pxPerFrame)
+                const label = clip.label ?? `Clip ${idx + 1}`
+
+                return (
+                  <div
+                    key={clip.id}
+                    style={{
+                      position: "absolute",
+                      top: clip.trackIndex * (laneHeight + laneGap) + 4,
+                      left,
+                      width,
+                      height: laneHeight - 8,
+                      background: "linear-gradient(90deg, #2563eb, #22d3ee)",
+                      color: "#0b1221",
+                      borderRadius: 4,
+                      padding: "4px 8px",
+                      boxSizing: "border-box",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{label}</span>
+                    <span style={{ fontSize: 12, opacity: 0.8 }}>
+                      {formatSeconds(clip.start)}s – {formatSeconds(clip.end)}s
+                    </span>
+                  </div>
+                )
+              })}
+
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: playheadPositionPx,
+                  width: 2,
+                  background: "#f59e0b",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

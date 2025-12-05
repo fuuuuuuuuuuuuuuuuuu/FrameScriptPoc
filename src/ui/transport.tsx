@@ -61,6 +61,8 @@ const Pill = ({ children }: { children: React.ReactNode }) => (
       display: "inline-flex",
       alignItems: "center",
       gap: 6,
+      minWidth: 120,
+      justifyContent: "space-between",
     }}
   >
     {children}

@@ -13,7 +13,9 @@ export const ClipVisibilityPanel = () => {
   return (
     <div
       style={{
-        width: 180,
+        width: "100%",
+        minWidth: 0,
+        height: "100%",
         padding: 12,
         borderRadius: 8,
         border: "1px solid #1f2a3c",
