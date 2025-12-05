@@ -3,7 +3,6 @@ import { PROJECT, PROJECT_SETTINGS } from "../project/project";
 import { WithCurrentFrame } from "./lib/frame"
 import { TimelineUI } from "./ui/timeline";
 import { ClipVisibilityPanel } from "./ui/clip-visibility";
-import { ErrorBoundary } from "./ui/error";
 
 export const StudioApp = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,9 +137,7 @@ export const StudioApp = () => {
                     boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
                   }}
                 >
-                  <ErrorBoundary fallback={<div>Project failed to render</div>}>
-                    <PROJECT />
-                  </ErrorBoundary>
+                  <PROJECT />
                 </div>
               </div>
             </div>
