@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import type { TimelineClip } from "../lib/timeline"
 import { useTimelineClips } from "../lib/timeline"
 import { useCurrentFrame, useSetCurrentFrame } from "../lib/frame"
@@ -27,6 +27,7 @@ export const TimelineUI = () => {
   const setCurrentFrame = useSetCurrentFrame()
   const projectSettings = PROJECT_SETTINGS
   const { fps } = projectSettings
+  const [zoom, setZoom] = useState(1)
 
   const placedClips = useMemo(() => stackClipsIntoTracks(clips), [clips])
   const trackCount = Math.max(1, placedClips.reduce((max, clip) => Math.max(max, clip.trackIndex + 1), 0))
@@ -39,7 +40,8 @@ export const TimelineUI = () => {
   const sliderMax = Math.max(0, durationInFrames - 1)
   const safeCurrentFrame = Math.min(currentFrame, sliderMax)
 
-  const pxPerFrame = 4
+  const basePxPerFrame = 4
+  const pxPerFrame = basePxPerFrame * zoom
   const contentWidth = Math.max(600, durationInFrames * pxPerFrame)
   const playheadPositionPx = safeCurrentFrame * pxPerFrame
 
@@ -89,8 +91,20 @@ export const TimelineUI = () => {
 
   return (
     <div style={{ background: "#0f0f12", border: "1px solid #27272a", borderRadius: 8, padding: 12, color: "#e5e7eb" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-        <div style={{ flex: "1 1 auto" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "1 1 320px" }}>
+          <label style={{ fontSize: 12, color: "#cbd5e1", minWidth: 46 }}>Scale</label>
+          <input
+            type="range"
+            min={0.05}
+            max={4}
+            step={0.05}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            style={{ flex: "1 1 auto" }}
+          />
+          <div style={{ width: 64, fontSize: 12, textAlign: "right", color: "#e5e7eb" }}>{Math.round(zoom * 100)}%</div>
+        </div>
         <div style={{ fontSize: 12, lineHeight: 1.3, minWidth: 140, textAlign: "right" }}>
           <div>Frame: {safeCurrentFrame}</div>
           <div>Time: {formatSeconds(safeCurrentFrame)}s</div>
