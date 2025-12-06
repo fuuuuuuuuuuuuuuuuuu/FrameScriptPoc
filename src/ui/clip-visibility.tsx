@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { useTimelineClips, useClipVisibilityState } from "../lib/timeline"
 
 export const ClipVisibilityPanel = () => {
@@ -8,6 +8,23 @@ export const ClipVisibilityPanel = () => {
   const sorted = useMemo(
     () => [...clips].sort((a, b) => a.start - b.start || a.end - b.end),
     [clips],
+  )
+  const clipMap = useMemo(() => {
+    const map = new Map<string, { parentId?: string | null }>()
+    clips.forEach((c) => map.set(c.id, { parentId: c.parentId ?? null }))
+    return map
+  }, [clips])
+
+  const isClipVisible = useCallback(
+    (clipId: string) => {
+      let cursor: string | null | undefined = clipId
+      while (cursor) {
+        if (hiddenMap[cursor]) return false
+        cursor = clipMap.get(cursor)?.parentId ?? null
+      }
+      return true
+    },
+    [clipMap, hiddenMap],
   )
 
   return (
@@ -30,7 +47,7 @@ export const ClipVisibilityPanel = () => {
     >
       <div style={{ fontWeight: 600, fontSize: 13, color: "#cbd5e1" }}>Clips</div>
       {sorted.map((clip, idx) => {
-        const isVisible = !hiddenMap[clip.id]
+        const isVisible = isClipVisible(clip.id)
         const label = clip.label ?? `Clip ${idx + 1}`
         return (
           <label

@@ -14,14 +14,16 @@ export const PROJECT = () => {
     return (
         <Project>
             <TimeLine>
-                <Clip start={seconds(1)} end={seconds(3)}>
+                <Clip start={seconds(0)} end={seconds(3)} label="Clip1">
                     <Text />
                 </Clip>
-                <Clip start={seconds(2)} end={seconds(5)}>
+                <Clip start={seconds(2)} end={seconds(5)} label="Clip2">
                     <Text />
                 </Clip>
-                <Clip start={seconds(2)} end={seconds(4)}>
-                    <Text />
+                <Clip start={seconds(1)} end={seconds(5)} label="Clip3">
+                    <Clip start={seconds(2)} end={seconds(10)} label="Clip3->Clip1">
+                        <Text />
+                    </Clip>
                 </Clip>
             </TimeLine>
         </Project>

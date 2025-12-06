@@ -9,6 +9,8 @@ export type TimelineClip = {
   start: number
   end: number
   label?: string
+  depth?: number
+  parentId?: string | null
 }
 
 type TimelineContextValue = {
@@ -130,5 +132,13 @@ export const useClipVisibilityState = () => {
 
 export const useClipVisibility = (id: string) => {
   const { hiddenMap } = useClipVisibilityState()
-  return !hiddenMap[id]
+  const clips = useTimelineClips()
+  const getParentId = (clipId: string) => clips.find((c) => c.id === clipId)?.parentId ?? null
+
+  let cursor: string | null = id
+  while (cursor) {
+    if (hiddenMap[cursor]) return false
+    cursor = getParentId(cursor)
+  }
+  return true
 }

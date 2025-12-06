@@ -24,7 +24,7 @@ export const useCurrentFrame = () => {
   if (!ctx) throw new Error("useCurrentFrame must be used inside <Timeline>");
 
   const clipStart = useClipStart()
-  if (clipStart) {
+  if (clipStart !== null) {
     return ctx.currentFrame - clipStart
   }
 

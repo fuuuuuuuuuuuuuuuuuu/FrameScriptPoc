@@ -7,6 +7,15 @@ import { TransportControls } from "./transport"
 
 type PositionedClip = TimelineClip & { trackIndex: number }
 
+const clipGradients = [
+  ["#2563eb", "#22d3ee"],
+  ["#8b5cf6", "#a855f7"],
+  ["#10b981", "#34d399"],
+  ["#f59e0b", "#fbbf24"],
+  ["#ef4444", "#f87171"],
+  ["#14b8a6", "#2dd4bf"],
+]
+
 const stackClipsIntoTracks = (clips: TimelineClip[]): PositionedClip[] => {
   const sorted = [...clips].sort((a, b) => a.start - b.start || a.end - b.end)
   const trackEndFrames: number[] = []
@@ -34,6 +43,22 @@ export const TimelineUI = () => {
 
   const placedClips = useMemo(() => stackClipsIntoTracks(clips), [clips])
   const trackCount = Math.max(1, placedClips.reduce((max, clip) => Math.max(max, clip.trackIndex + 1), 0))
+  const clipMap = useMemo(() => {
+    const map = new Map<string, PositionedClip>()
+    placedClips.forEach((c) => map.set(c.id, c))
+    return map
+  }, [placedClips])
+  const isClipVisible = useCallback(
+    (clipId: string) => {
+      let cursor: string | null | undefined = clipId
+      while (cursor) {
+        if (hiddenMap[cursor]) return false
+        cursor = clipMap.get(cursor)?.parentId ?? null
+      }
+      return true
+    },
+    [clipMap, hiddenMap],
+  )
 
   const durationInFrames = useMemo(() => {
     const maxClipEnd = placedClips.reduce((max, clip) => Math.max(max, clip.end + 1), 0)
@@ -342,9 +367,11 @@ export const TimelineUI = () => {
                 const left = clip.start * pxPerFrame
                 const width = Math.max(0, (clip.end - clip.start + 1) * pxPerFrame)
                 const label = clip.label ?? `Clip ${idx + 1}`
-                const visible = !hiddenMap[clip.id]
+                const visible = isClipVisible(clip.id)
                 const isActive = safeCurrentFrame >= clip.start && safeCurrentFrame <= clip.end
                 const relativeFrame = safeCurrentFrame - clip.start
+                const depth = clip.depth ?? 0
+                const [c1, c2] = clipGradients[depth % clipGradients.length]
 
                 return (
                   <div
@@ -355,7 +382,7 @@ export const TimelineUI = () => {
                       left,
                       width,
                       height: laneHeight - 8,
-                      background: visible ? "linear-gradient(90deg, #2563eb, #22d3ee)" : "linear-gradient(90deg, #1f2937, #0f172a)",
+                      background: visible ? `linear-gradient(90deg, ${c1}, ${c2})` : "linear-gradient(90deg, #1f2937, #0f172a)",
                       color: visible ? "#0b1221" : "#94a3b8",
                       borderRadius: 4,
                       padding: "4px 8px",
