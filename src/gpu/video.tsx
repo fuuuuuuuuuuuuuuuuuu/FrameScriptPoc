@@ -1,17 +1,40 @@
+import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
 import { initWebGPU, uploadAndDrawFrame } from "./webgpu";
 import { useCurrentFrame } from "../lib/frame";
 import { PROJECT_SETTINGS } from "../../project/project";
 
 type VideoCanvasProps = {
-  video: string
+  video: string;
+  style?: CSSProperties;
 }
 
-export const VideoCanvas = ({ video }: VideoCanvasProps) => {
+export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   const currentFrame = useCurrentFrame();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const nextWidth = Math.max(1, Math.round(rect.width * dpr));
+      const nextHeight = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -83,17 +106,19 @@ export const VideoCanvas = ({ video }: VideoCanvasProps) => {
     ws.send(JSON.stringify(req));
   }, [currentFrame]);
 
+  const baseStyle: CSSProperties = {
+    width: 640,
+    height: 360,
+    border: "1px solid #444",
+    backgroundColor: "#000",
+  };
+
   return (
     <canvas
       ref={canvasRef}
       width={640}
       height={360}
-      style={{
-        width: 640,
-        height: 360,
-        border: "1px solid #444",
-        backgroundColor: "#000",
-      }}
+      style={style ? { ...baseStyle, ...style } : baseStyle}
     />
   );
 };

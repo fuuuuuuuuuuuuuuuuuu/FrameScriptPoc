@@ -83,6 +83,21 @@ export function uploadAndDrawFrame(
 ) {
   if (!device || !context) return;
 
+  const unpaddedBytesPerRow = width * 4;
+  const alignedBytesPerRow = Math.ceil(unpaddedBytesPerRow / 256) * 256;
+  const needsPadding = alignedBytesPerRow !== unpaddedBytesPerRow;
+
+  let data: Uint8Array = frameData;
+  if (needsPadding) {
+    const padded = new Uint8Array(alignedBytesPerRow * height);
+    for (let row = 0; row < height; row++) {
+      const srcStart = row * unpaddedBytesPerRow;
+      const dstStart = row * alignedBytesPerRow;
+      padded.set(frameData.subarray(srcStart, srcStart + unpaddedBytesPerRow), dstStart);
+    }
+    data = padded;
+  }
+
   if (!texture || textureWidth !== width || textureHeight !== height) {
     texture?.destroy();
     textureWidth = width;
@@ -100,8 +115,8 @@ export function uploadAndDrawFrame(
 
   device.queue.writeTexture(
     { texture: texture! },
-    frameData as unknown as GPUAllowSharedBufferSource,
-    { bytesPerRow: width * 4 },
+    data as unknown as GPUAllowSharedBufferSource,
+    { bytesPerRow: alignedBytesPerRow, rowsPerImage: height },
     { width, height, depthOrArrayLayers: 1 },
   );
 

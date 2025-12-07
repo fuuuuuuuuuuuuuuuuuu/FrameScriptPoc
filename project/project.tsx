@@ -24,7 +24,7 @@ export const PROJECT = () => {
                 <Clip start={seconds(1)} end={seconds(5)} label="Clip3">
                     <Clip start={seconds(2)} end={seconds(10)} label="Clip3->Clip1">
                         <Text />
-                        <VideoCanvas video="~/Videos/2025-11-11 14-44-16.mp4" />
+                        <VideoCanvas video="~/Videos/2025-11-11 14-44-16.mp4" style={{ width: "100%", height: "100%" }} />
                     </Clip>
                 </Clip>
             </TimeLine>

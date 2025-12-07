@@ -16,6 +16,7 @@ use ffmpeg::ffi;
 
 use crate::util::AtomicCell;
 use crate::util::macros::once;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Copy)]
 struct HWDecoder {
@@ -60,6 +61,57 @@ thread_local! {
     pub static DECODE_HW_PIX_FORMAT: Cell<AVPixelFormat> = Cell::new(AVPixelFormat::AV_PIX_FMT_NONE);
 }
 
+#[derive(Debug)]
+struct SharedHwDevice {
+    ptr: *mut ffi::AVBufferRef,
+}
+
+unsafe impl Send for SharedHwDevice {}
+unsafe impl Sync for SharedHwDevice {}
+
+impl SharedHwDevice {
+    fn new(device_type: AVHWDeviceType) -> Result<Self, String> {
+        let mut raw: *mut ffi::AVBufferRef = ptr::null_mut();
+
+        let ret = unsafe {
+            ffi::av_hwdevice_ctx_create(
+                &mut raw,
+                device_type,
+                ptr::null(),
+                ptr::null_mut(),
+                0,
+            )
+        };
+
+        if ret < 0 {
+            return Err(ffmpeg_error_string(ret));
+        }
+
+        Ok(Self { ptr: raw })
+    }
+}
+
+impl Drop for SharedHwDevice {
+    fn drop(&mut self) {
+        unsafe {
+            ffi::av_buffer_unref(&mut self.ptr);
+        }
+    }
+}
+
+static HW_DEVICE_REF: LazyLock<Mutex<Option<Arc<SharedHwDevice>>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+fn get_or_init_hw_device(device_type: AVHWDeviceType) -> Option<Arc<SharedHwDevice>> {
+    let mut guard = HW_DEVICE_REF.lock().unwrap();
+    if guard.is_none() {
+        if let Ok(device) = SharedHwDevice::new(device_type) {
+            *guard = Some(Arc::new(device));
+        }
+    }
+    guard.clone()
+}
+
 unsafe extern "C" fn get_hw_format(
     _ctx: *mut ffi::AVCodecContext,
     pix_fmts: *const ffi::AVPixelFormat,
@@ -89,29 +141,17 @@ fn init_hw_device(
     device_type: AVHWDeviceType,
     pixel_format: AVPixelFormat,
 ) -> Result<(), String> {
+    let shared = get_or_init_hw_device(device_type)
+        .ok_or_else(|| "failed to create shared hw device context".to_string())?;
+
     unsafe {
-        let mut hw_device_ctx: *mut ffi::AVBufferRef = ptr::null_mut();
-
-        let ret = ffi::av_hwdevice_ctx_create(
-            &mut hw_device_ctx,
-            device_type,
-            ptr::null(),
-            ptr::null_mut(),
-            0,
-        );
-        if ret < 0 {
-            return Err(format!(
-                "av_hwdevice_ctx_create failed: {}",
-                ffmpeg_error_string(ret)
-            ));
-        }
-
         let avctx = ctx.as_mut_ptr();
 
         DECODE_HW_PIX_FORMAT.set(pixel_format);
         (*avctx).get_format = Some(get_hw_format);
 
-        (*avctx).hw_device_ctx = ffi::av_buffer_ref(hw_device_ctx);
+        // av_buffer_ref で参照カウントを増やす。shared は静的に保持されているため GPU メモリは再利用される。
+        (*avctx).hw_device_ctx = ffi::av_buffer_ref(shared.ptr);
         if (*avctx).hw_device_ctx.is_null() {
             return Err(String::from("av_buffer_ref(hw_device_ctx) failed"));
         }
