@@ -100,6 +100,16 @@ export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
   }
 
   useEffect(() => {
+    if (isPlaying) {
+      const time = currentFrame / PROJECT_SETTINGS.fps
+      const element = elementRef.current
+      if (element) {
+        element.currentTime = time
+      }
+    }
+  }, [isVisible])
+
+  useEffect(() => {
     const el = elementRef.current
     if (!el) return
     if (isPlaying && isVisible) {
