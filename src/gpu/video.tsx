@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { useCurrentFrame } from "../lib/frame";
+import { useCurrentFrame, useSetGlobalCurrentFrame } from "../lib/frame";
 import { PROJECT_SETTINGS } from "../../project/project";
 import { useIsPlaying } from "../StudioApp";
-import { useClipActive, useProvideClipDuration } from "../lib/clip";
+import { useClipActive, useClipStart, useProvideClipDuration } from "../lib/clip";
 
 export type Video = {
   path: string
@@ -112,6 +112,26 @@ export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
       playingFlag.current = false
     }
   }, [isPlaying, isVisible])
+
+  const setGlobalCurrentFrame = useSetGlobalCurrentFrame()
+  const clipStart = useClipStart() ?? 0
+
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el || !isPlaying || !isVisible) return
+
+    let raf: number | null = null
+    const tick = () => {
+      const time = el.currentTime
+      const frame = Math.round(time * PROJECT_SETTINGS.fps)
+      setGlobalCurrentFrame(frame + clipStart)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf)
+    }
+  }, [clipStart, isPlaying, isVisible, setGlobalCurrentFrame])
 
   return (
     <video

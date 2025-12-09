@@ -11,7 +11,7 @@ export const PROJECT_SETTINGS: ProjectSettings = {
     fps: 60,
 }
 
-const TEST_VIDEO = { path: "~/Videos/1080p.mp4" }
+const TEST_VIDEO = { path: "~/Videos/music.mp4" }
 
 export const PROJECT = () => {
     return (
@@ -22,6 +22,9 @@ export const PROJECT = () => {
                 </Clip>
                 <ClipSequence>
                     <ClipSequence>
+                        <Clip duration={seconds(3)}>
+                            <Text />
+                        </Clip>
                         <Clip>
                             <VideoCanvas video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
                         </Clip>

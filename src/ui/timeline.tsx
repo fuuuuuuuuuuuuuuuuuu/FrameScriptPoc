@@ -4,7 +4,7 @@ import { useTimelineClips, useClipVisibilityState } from "../lib/timeline"
 import { useGlobalCurrentFrame, useSetGlobalCurrentFrame } from "../lib/frame"
 import { PROJECT_SETTINGS } from "../../project/project"
 import { TransportControls } from "./transport"
-import { useSetIsPlaying } from "../StudioApp"
+import { useIsPlaying, useSetIsPlaying } from "../StudioApp"
 
 type PositionedClip = TimelineClip & { trackIndex: number }
 
@@ -128,6 +128,8 @@ export const TimelineUI = () => {
     [updateFromClientX],
   )
 
+  const isPlaying = useIsPlaying()
+
   useEffect(() => {
     const scroller = scrollerRef.current
     if (!scroller) return
@@ -139,9 +141,13 @@ export const TimelineUI = () => {
 
     if (pos < left + margin || pos > right - margin) {
       const target = Math.max(0, Math.min(contentWidth - viewport, pos - viewport / 2))
-      scroller.scrollTo({ left: target, behavior: "smooth" })
+      if (isPlaying) {
+        scroller.scrollLeft = target
+      } else {
+        scroller.scrollTo({ left: target, behavior: "smooth" })
+      }
     }
-  }, [playheadPositionPx, contentWidth])
+  }, [isPlaying, playheadPositionPx, contentWidth])
 
   const formatSeconds = useCallback(
     (frame: number) => (frame / fps).toFixed(2),
@@ -252,35 +258,35 @@ export const TimelineUI = () => {
               top: 8,
               left: 8,
               right: 8,
-            bottom: 12,
-            width: contentWidth,
-            minWidth: contentWidth,
-            height: containerHeight,
-          }}
-        >
-          <div
-            style={{
-              position: "sticky",
-              top: 0,
-              left: 0,
+              bottom: 12,
               width: contentWidth,
-              height: scrubHeight,
-              marginBottom: scrubGap,
-              cursor: "ew-resize",
-              userSelect: "none",
+              minWidth: contentWidth,
+              height: containerHeight,
             }}
-            ref={scrubRef}
-            onPointerDown={handlePointerDown}
+          >
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                left: 0,
+                width: contentWidth,
+                height: scrubHeight,
+                marginBottom: scrubGap,
+                cursor: "ew-resize",
+                userSelect: "none",
+              }}
+              ref={scrubRef}
+              onPointerDown={handlePointerDown}
             >
               <div
                 style={{
-                position: "absolute",
-                top: 8,
-                left: 0,
-                right: 0,
-                height: 4,
-                borderRadius: 999,
-                background: "linear-gradient(90deg, #334155, #1e293b)",
+                  position: "absolute",
+                  top: 8,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  borderRadius: 999,
+                  background: "linear-gradient(90deg, #334155, #1e293b)",
                 }}
               />
               <div

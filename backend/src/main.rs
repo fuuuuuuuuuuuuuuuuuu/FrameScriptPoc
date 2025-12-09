@@ -35,6 +35,11 @@ struct VideoQuery {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct AudioQuery {
+    path: String,
+}
+
 #[derive(Clone)]
 struct AppState;
 
@@ -55,6 +60,7 @@ async fn main() {
         .route("/ws", get(ws_handler))
         .route("/video", get(video_handler).options(options_handler))
         .route("/video/meta", get(video_meta_handler).options(options_handler))
+        .route("/audio", get(audio_handler).options(options_handler))
         .route("/healthz", get(healthz_handler).options(options_handler))
         .with_state(app_state);
 
@@ -143,6 +149,92 @@ async fn video_handler(
     headers.insert(
         header::CONTENT_TYPE,
         header::HeaderValue::from_static("video/mp4"),
+    );
+    if let Some(range_str) = content_range {
+        headers.insert(
+            header::CONTENT_RANGE,
+            header::HeaderValue::from_str(&range_str)
+                .unwrap_or_else(|_| header::HeaderValue::from_static("bytes */*")),
+        );
+    }
+    apply_cors(headers);
+
+    Ok(resp)
+}
+
+async fn audio_handler(
+    State(_state): State<AppState>,
+    Query(AudioQuery { path }): Query<AudioQuery>,
+    range: Option<TypedHeader<Range>>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let resolved_path = resolve_path_to_string(&path).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let mut file = tokio::fs::File::open(&resolved_path)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let metadata = file
+        .metadata()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let len = metadata.len();
+
+    let (status, body, content_range, content_length) = if let Some(TypedHeader(range)) = range {
+        let mut iter = range.satisfiable_ranges(len);
+
+        if let Some((start_bound, end_bound)) = iter.next() {
+            let start = match start_bound {
+                Bound::Included(n) => n,
+                Bound::Excluded(n) => n + 1,
+                Bound::Unbounded => 0,
+            };
+
+            let end = match end_bound {
+                Bound::Included(n) => n,
+                Bound::Excluded(n) => n.saturating_sub(1),
+                Bound::Unbounded => len.saturating_sub(1),
+            };
+
+            if start >= len || end >= len || start > end {
+                return Err(StatusCode::RANGE_NOT_SATISFIABLE);
+            }
+
+            let chunk_size = end - start + 1;
+
+            file.seek(SeekFrom::Start(start))
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let stream = ReaderStream::with_capacity(file.take(chunk_size), 16 * 1024);
+            let range_header = format!("bytes {}-{}/{}", start, end, len);
+
+            (
+                StatusCode::PARTIAL_CONTENT,
+                stream,
+                Some(range_header),
+                chunk_size,
+            )
+        } else {
+            return Err(StatusCode::RANGE_NOT_SATISFIABLE);
+        }
+    } else {
+        // Range ヘッダなし => 全体を返す
+        let stream = ReaderStream::with_capacity(file.take(len), 16 * 1024);
+        (StatusCode::OK, stream, None, len)
+    };
+
+    let mut resp = axum::response::Response::new(axum::body::Body::from_stream(body));
+    *resp.status_mut() = status;
+
+    let headers = resp.headers_mut();
+    headers.insert(
+        header::ACCEPT_RANGES,
+        header::HeaderValue::from_static("bytes"),
+    );
+    if let Ok(v) = header::HeaderValue::from_str(&content_length.to_string()) {
+        headers.insert(header::CONTENT_LENGTH, v);
+    }
+    headers.insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("audio/mp4"),
     );
     if let Some(range_str) = content_range {
         headers.insert(
