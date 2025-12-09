@@ -4,6 +4,7 @@ import { useTimelineClips, useClipVisibilityState } from "../lib/timeline"
 import { useGlobalCurrentFrame, useSetGlobalCurrentFrame } from "../lib/frame"
 import { PROJECT_SETTINGS } from "../../project/project"
 import { TransportControls } from "./transport"
+import { useSetIsPlaying } from "../StudioApp"
 
 type PositionedClip = TimelineClip & { trackIndex: number }
 
@@ -76,6 +77,8 @@ export const TimelineUI = () => {
   const scrollerRef = useRef<HTMLDivElement>(null)
   const scrubRef = useRef<HTMLDivElement>(null)
 
+  const setIsPlaying = useSetIsPlaying()
+
   const updateFromClientX = useCallback(
     (clientX: number) => {
       const scroller = scrollerRef.current
@@ -85,6 +88,7 @@ export const TimelineUI = () => {
       const clampedPx = Math.max(0, Math.min(contentWidth, x))
       const frame = Math.round(clampedPx / pxPerFrame)
       setCurrentFrame(Math.min(frame, sliderMax))
+      setIsPlaying(false)
     },
     [contentWidth, pxPerFrame, setCurrentFrame, sliderMax],
   )

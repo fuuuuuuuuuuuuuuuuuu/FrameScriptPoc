@@ -26,25 +26,25 @@ export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
     const url = new URL("http://localhost:3000/video");
     url.searchParams.set("path", video);
     return url.toString();
-  }, [video]);
+  }, [video])
 
   const baseStyle: CSSProperties = {
     width: 640,
     height: 360,
     border: "1px solid #444",
     backgroundColor: "#000",
-  };
+  }
 
-  const isPlayingStore = useIsPlayingStore();
+  const isPlayingStore = useIsPlayingStore()
 
   useEffect(() => {
     const unsubscribe = isPlayingStore.subscribe((isPlaying) => {
       if (!isPlaying) {
         elementRef.current?.pause()
       }
-    });
-    return unsubscribe;
-  }, [isPlayingStore]);
+    })
+    return unsubscribe
+  }, [isPlayingStore])
 
   if (elementRef.current && isPlaying && isVisible) {
     if (!playingFlag.current) {

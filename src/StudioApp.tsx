@@ -242,6 +242,6 @@ export const useSetIsPlaying = () => {
 
 export const useIsPlayingStore = () => {
   const ctx = useContext(StudioStateContext);
-  if (!ctx) throw new Error("useIsPlayingStore must be used inside <StudioStateContext.Provider>");
+  if (!ctx) throw new Error("useIsPlayingStore must be used inside <StudioStateContext>");
   return ctx.isPlayingStore;
 };
