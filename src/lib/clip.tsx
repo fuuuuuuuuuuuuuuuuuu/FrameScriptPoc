@@ -1,9 +1,9 @@
-import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useId } from "react"
+import { Children, cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useState } from "react"
 import { useGlobalCurrentFrame } from "./frame"
 import { useClipVisibility, useTimelineRegistration } from "./timeline"
 import { registerClipGlobal, unregisterClipGlobal } from "./timeline"
 
-type ClipProps = {
+type ClipStaticProps = {
   start: number
   end: number
   label?: string
@@ -15,7 +15,20 @@ type ClipContextValue = { id: string; baseStart: number; baseEnd: number; depth:
 
 const ClipContext = createContext<ClipContextValue | null>(null)
 
-export const Clip = ({ start, end, label, children, laneId }: ClipProps) => {
+// Duration reporting from descendants (used by Clip)
+const DurationReportContext = createContext<((frames: number) => void) | null>(null)
+
+export const useProvideClipDuration = (frames: number | null | undefined) => {
+  const report = useContext(DurationReportContext)
+  useEffect(() => {
+    if (report && frames != null) {
+      report(Math.max(0, frames))
+    }
+  }, [report, frames])
+}
+
+// Static clip with explicit start/end. Treated as length 0 unless caller provides span.
+export const ClipStatic = ({ start, end, label, children, laneId }: ClipStaticProps) => {
   const currentFrame = useGlobalCurrentFrame()
   const timeline = useTimelineRegistration()
   const registerClip = timeline?.registerClip
@@ -49,7 +62,7 @@ export const Clip = ({ start, end, label, children, laneId }: ClipProps) => {
 
     registerClipGlobal({ id, start: clampedStart, end: clampedEnd, label, depth, parentId, laneId })
     return () => unregisterClipGlobal(id)
-  }, [registerClip, unregisterClip, id, clampedStart, clampedEnd, label, depth, hasSpan, parentId])
+  }, [registerClip, unregisterClip, id, clampedStart, clampedEnd, label, depth, hasSpan, parentId, laneId])
 
   return (
     <ClipContext.Provider value={{ id, baseStart: clampedStart, baseEnd: clampedEnd, depth, active: isActive }}>
@@ -75,13 +88,67 @@ export const useClipActive = () => {
   return ctx?.active ?? false
 }
 
-type ClipElement = React.ReactElement<ClipProps>
+type ClipStaticElement = React.ReactElement<ClipStaticProps>
 
-// Places child <Clip> components back-to-back on the same lane by rewiring their start/end.
+type ClipProps = {
+  start?: number
+  label?: string
+  duration?: number // frames
+  laneId?: string
+  children?: React.ReactNode
+  onDurationChange?: (frames: number) => void
+}
+
+// Clip (duration-aware): computes its duration from children via useProvideClipDuration or duration prop.
+export const Clip = ({
+  start = 0,
+  label,
+  duration,
+  laneId,
+  children,
+  onDurationChange,
+}: ClipProps) => {
+  const [frames, setFrames] = useState<number>(Math.max(0, duration ?? 0))
+
+  const handleReport = useCallback(
+    (value: number) => {
+      setFrames((prev) => {
+        if (prev === value) return prev
+        return value
+      })
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (duration != null) {
+      setFrames(Math.max(0, duration))
+    }
+  }, [duration])
+
+  useEffect(() => {
+    if (onDurationChange) {
+      onDurationChange(frames)
+    }
+  }, [frames, onDurationChange])
+
+  const end = start + Math.max(0, frames) - 1
+
+  return (
+    <DurationReportContext.Provider value={handleReport}>
+      <ClipStatic start={start} end={end < start ? start : end} label={label} laneId={laneId}>
+        {children}
+      </ClipStatic>
+    </DurationReportContext.Provider>
+  )
+}
+  ; (Clip as any)._isClip = true
+
+// Places child <ClipStatic> components back-to-back on the same lane by rewiring their start/end.
 // Each child's duration is preserved (end - start inclusive); next clip starts at previous end + 1.
 export const Serial = ({ children }: { children: React.ReactNode }) => {
   const laneId = useId()
-  const clips = Children.toArray(children).filter(isValidElement) as ClipElement[]
+  const clips = Children.toArray(children).filter(isValidElement) as ClipStaticElement[]
   if (clips.length === 0) return null
 
   const baseStart = clips[0].props.start ?? 0
@@ -104,3 +171,63 @@ export const Serial = ({ children }: { children: React.ReactNode }) => {
 
   return <>{serialised}</>
 }
+
+type ClipElementDyn = React.ReactElement<ClipProps>
+
+// ClipSequence: Chains multiple <Clip> on the same lane, and can be treated as a block via _isClip.
+export const ClipSequence = ({
+  children,
+  start = 0,
+  onDurationChange,
+  label,
+}: {
+  children: React.ReactNode
+  start?: number
+  onDurationChange?: (frames: number) => void
+  label?: string
+}) => {
+  const laneId = useId()
+  const items = Children.toArray(children).filter(
+    (child) => isValidElement(child) && (child as ClipElementDyn).type && ((child as ClipElementDyn).type as any)._isClip,
+  ) as ClipElementDyn[]
+  const [durations, setDurations] = useState<Map<string, number>>(new Map())
+
+  if (items.length === 0) return null
+
+  const handleDurationChange = useCallback(
+    (key: string) => (value: number) => {
+      setDurations((prev) => {
+        const next = new Map(prev)
+        next.set(key, Math.max(0, value))
+        return next
+      })
+    },
+    [],
+  )
+
+  let cursor = start
+  const serialised = items.map((el, index) => {
+    const key = (el.key ?? index).toString()
+    const knownDuration = durations.get(key) ?? Math.max(0, el.props.duration ?? 0)
+    const nextStart = cursor
+    cursor = cursor + knownDuration
+
+    return cloneElement(el, {
+      start: nextStart,
+      laneId,
+      key,
+      onDurationChange: handleDurationChange(key),
+    })
+  })
+
+  const total = cursor - start
+
+  useEffect(() => {
+    if (onDurationChange) {
+      onDurationChange(total)
+    }
+  }, [onDurationChange, total])
+
+  return <>{serialised}</>
+}
+(ClipSequence as any)._isClip = true

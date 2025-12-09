@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useCurrentFrame } from "../lib/frame";
 import { PROJECT_SETTINGS } from "../../project/project";
 import { useIsPlaying } from "../StudioApp";
-import { useClipActive } from "../lib/clip";
+import { useClipActive, useProvideClipDuration } from "../lib/clip";
 
 export type Video = {
   path: string
@@ -71,11 +71,22 @@ export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
   const isPlaying = useIsPlaying()
   const isVisible = useClipActive()
   const playingFlag = useRef(false)
+  const pendingSeek = useRef<number | null>(null)
+  const durationFrames = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
+  useProvideClipDuration(durationFrames)
 
-  if (elementRef.current && !isPlaying) {
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el || isPlaying) return
+
     const time = currentFrame / PROJECT_SETTINGS.fps
-    elementRef.current.currentTime = time
-  }
+    if (el.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      el.currentTime = time
+      pendingSeek.current = null
+    } else {
+      pendingSeek.current = time
+    }
+  }, [currentFrame, isPlaying])
 
   const src = useMemo(() => {
     return buildVideoUrl(resolvedVideo);
@@ -88,20 +99,32 @@ export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
     backgroundColor: "#000",
   }
 
-  if (elementRef.current && isPlaying && isVisible) {
-    if (!playingFlag.current) {
-      elementRef.current.play()
-      playingFlag.current = true
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el) return
+    if (isPlaying && isVisible) {
+      if (!playingFlag.current) {
+        el.play()
+        playingFlag.current = true
+      }
+    } else {
+      el.pause()
+      playingFlag.current = false
     }
-  } else {
-    elementRef.current?.pause()
-    playingFlag.current = false
-  }
+  }, [isPlaying, isVisible])
 
   return (
     <video
       ref={elementRef}
       src={src}
+      onLoadedMetadata={() => {
+        const el = elementRef.current
+        if (!el) return
+        if (pendingSeek.current != null) {
+          el.currentTime = pendingSeek.current
+          pendingSeek.current = null
+        }
+      }}
       onEnded={() => elementRef.current?.pause()}
       style={style ? { ...baseStyle, ...style } : baseStyle}
     />

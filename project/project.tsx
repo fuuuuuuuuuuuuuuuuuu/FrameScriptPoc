@@ -1,5 +1,5 @@
-import { video_length, VideoCanvas } from "../src/gpu/video"
-import { Clip, Serial } from "../src/lib/clip"
+import { VideoCanvas } from "../src/gpu/video"
+import { Clip, ClipSequence } from "../src/lib/clip"
 import { seconds, useCurrentFrame } from "../src/lib/frame"
 import { Project, type ProjectSettings } from "../src/lib/project"
 import { TimeLine } from "../src/lib/timeline"
@@ -17,26 +17,28 @@ export const PROJECT = () => {
     return (
         <Project>
             <TimeLine>
-                <Clip start={seconds(0)} end={seconds(1)} label="Clip1">
+                <Clip duration={seconds(3)} label="Clip1">
                     <Text />
                 </Clip>
-                <Serial>
-                    <Clip start={seconds(0)} end={video_length(TEST_VIDEO)} label="Clip2">
-                        <VideoCanvas video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
-                    </Clip>
-                    <Clip start={video_length(TEST_VIDEO)} end={video_length(TEST_VIDEO) + seconds(10)} label="CLip3">
-                        <Text />
-                    </Clip>
-                </Serial>
+                <ClipSequence>
+                    <ClipSequence>
+                        <Clip>
+                            <VideoCanvas video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
+                        </Clip>
+                        <Clip duration={seconds(3)}>
+                            <Text />
+                        </Clip>
+                    </ClipSequence>
+                </ClipSequence>
             </TimeLine>
         </Project>
     )
 }
 
-const Text = () => {
+const Text = ({ text }: { text?: string }) => {
     const currentFrame = useCurrentFrame()
 
     return (
-        <p style={{ color: "white" }}>Frame: {currentFrame}</p>
+        <p style={{ color: "white" }}>Frame: {currentFrame} {text}</p>
     )
 }
