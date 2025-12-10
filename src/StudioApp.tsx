@@ -11,7 +11,7 @@ type StudioState = {
   isPlayingStore: Store<boolean>
 }
 
-const StudioStateContext = createContext<StudioState | null>(null)
+export const StudioStateContext = createContext<StudioState | null>(null)
 
 export const StudioApp = () => {
   const containerRef = useRef<HTMLDivElement>(null);

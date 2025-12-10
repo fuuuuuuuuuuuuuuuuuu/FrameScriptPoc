@@ -48,6 +48,12 @@ const stackClipsIntoTracks = (clips: TimelineClip[]): PositionedClip[] => {
   })
 }
 
+let TIMELINE_ALL_FRAMES = 0
+
+export function getTimeLineAllFrames(): number {
+  return TIMELINE_ALL_FRAMES
+}
+
 export const TimelineUI = () => {
   const clips = useTimelineClips()
   const { hiddenMap } = useClipVisibilityState()
@@ -78,7 +84,8 @@ export const TimelineUI = () => {
 
   const durationInFrames = useMemo(() => {
     const maxClipEnd = placedClips.reduce((max, clip) => Math.max(max, clip.end + 1), 0)
-    return Math.max(1, Math.round(fps * 5), maxClipEnd, currentFrame + 1)
+    TIMELINE_ALL_FRAMES = Math.max(1, Math.round(fps * 5), maxClipEnd, currentFrame + 1)
+    return TIMELINE_ALL_FRAMES
   }, [placedClips, fps, currentFrame])
 
   const sliderMax = Math.max(0, durationInFrames - 1)
