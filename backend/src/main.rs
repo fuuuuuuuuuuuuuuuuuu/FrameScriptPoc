@@ -57,6 +57,10 @@ struct FrameRequest {
 
 #[tokio::main]
 async fn main() {
+    unsafe {
+        std::env::set_var("LIBVA_DRIVER_NAME", "radeonsi");
+    };
+
     tracing_subscriber::fmt::init();
 
     let app_state = AppState;
@@ -311,9 +315,8 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
 
                 let path = resolve_path_to_string(&req.video).unwrap_or_default();
 
-                let frame_rgba =
-                    hw_decoder::extract_frame_hw_rgba(&path, frame_index as _, width, height)
-                        .unwrap();
+                let decoder = DECODER.decoder(path, width, height).await;
+                let frame_rgba = decoder.get_frame(frame_index).await;
 
                 // into [width][height][frame_index][rgba...] packet
                 let mut packet = Vec::with_capacity(12 + frame_rgba.len());

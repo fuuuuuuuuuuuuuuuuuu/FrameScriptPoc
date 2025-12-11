@@ -39,6 +39,18 @@ pub fn probe_video_duration_ms(path: &str) -> Result<u64, String> {
     Err("failed to read duration".to_string())
 }
 
+pub fn probe_video_frames(path: &str) -> Result<u64, String> {
+    ffmpeg::init().map_err(|error| format!("ffmpeg::init failed: {}", error))?;
+
+    let ictx = ffmpeg::format::input(path).map_err(|_| format!("failed to open input: {path}"))?;
+
+    if let Some(stream) = ictx.streams().best(ffmpeg::media::Type::Video) {
+        return Ok(stream.frames() as _);
+    }
+
+    Err("failed to read frames".to_string())
+}
+
 pub fn probe_video_fps(path: &str) -> Result<f64, String> {
     ffmpeg::init().map_err(|error| format!("ffmpeg::init failed: {}", error))?;
 
