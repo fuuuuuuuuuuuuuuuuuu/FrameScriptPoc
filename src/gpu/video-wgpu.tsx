@@ -1,20 +1,39 @@
 import type { CSSProperties } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { initWebGPU, uploadAndDrawFrame } from "./webgpu";
 import { useCurrentFrame } from "../lib/frame";
 import { PROJECT_SETTINGS } from "../../project/project";
+import { createManualPromise, type ManualPromise } from "../util/promise";
+import { normalizeVideo, video_fps, video_length, type VideoProps } from "./video";
+import { useProvideClipDuration } from "../lib/clip";
 
-type VideoCanvasProps = {
-  video: string;
-  style?: CSSProperties;
+let promises = new Set<Promise<void>>()
+
+const api = {
+  waitWGPUTexture: async () => {
+    for (let future of promises) {
+      await future
+    }
+    promises.clear()
+  }
 };
+(window as any).__frameScript = {
+  ...(window as any).__frameScript,
+  waitWGPUTexture: api.waitWGPUTexture
+}
 
 // 旧 WebGPU 経路。VideoCanvasWGPU に改名して残しておく。
-export const VideoCanvasWGPU = ({ video, style }: VideoCanvasProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+export const VideoCanvasWGPU = ({ video, style }: VideoProps) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const resolved = normalizeVideo(video)
+  const fps = useMemo(() => video_fps(resolved), [resolved])
+  const durationFrames = useMemo(() => video_length(resolved), [resolved])
+  useProvideClipDuration(durationFrames)
 
-  const currentFrame = useCurrentFrame();
+  const currentFrame = useCurrentFrame()
+
+  const promise = useRef<ManualPromise<void> | null>(null)
 
   // Canvas の実ピクセルサイズを要素サイズに合わせる
   useEffect(() => {
@@ -53,6 +72,19 @@ export const VideoCanvasWGPU = ({ video, style }: VideoCanvasProps) => {
 
         ws.onopen = () => {
           console.log("ws connected");
+
+          // first request
+          const req = {
+            video: resolved.path,
+            width: PROJECT_SETTINGS.width,
+            height: PROJECT_SETTINGS.height,
+            frame: (currentFrame * fps) / PROJECT_SETTINGS.fps,
+          };
+
+          promise.current = createManualPromise()
+          promises.add(promise.current.promise)
+
+          ws.send(JSON.stringify(req));
         };
 
         ws.onmessage = (event) => {
@@ -67,10 +99,12 @@ export const VideoCanvasWGPU = ({ video, style }: VideoCanvasProps) => {
           const rgba = bytes.subarray(12);
 
           uploadAndDrawFrame(rgba, width, height);
+          promise.current!.resolve()
         };
 
-        ws.onerror = (e) => {
-          console.error("ws error", e);
+        ws.onerror = (error) => {
+          console.error("ws error", error);
+          promise.current!.reject(error)
         };
 
         ws.onclose = () => {
@@ -97,12 +131,17 @@ export const VideoCanvasWGPU = ({ video, style }: VideoCanvasProps) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
+    // currentFrame : PROJECT.fps = x : video.fps
+    // x = (currentFrame * video.fps) / PROJECT.fps
     const req = {
-      video,
+      video: resolved.path,
       width: PROJECT_SETTINGS.width,
       height: PROJECT_SETTINGS.height,
-      frame: currentFrame,
+      frame: (currentFrame * fps) / PROJECT_SETTINGS.fps,
     };
+
+    promise.current = createManualPromise()
+    promises.add(promise.current.promise)
 
     ws.send(JSON.stringify(req));
   }, [currentFrame, video]);

@@ -12,7 +12,7 @@ const RanderRoot = () => {
   }, [])
 
   return (
-    <StudioStateContext.Provider value={{ isPlaying: false, setIsPlaying, isPlayingStore: storeRef.current }}>
+    <StudioStateContext.Provider value={{ isPlaying: false, setIsPlaying, isPlayingStore: storeRef.current, isRender: true }}>
       <WithCurrentFrame>
         <PROJECT />
       </WithCurrentFrame>

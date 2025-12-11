@@ -455,3 +455,25 @@ fn evict_over_capacity(state: &mut CacheState) {
         }
     }
 }
+
+pub fn generate_empty_frame(width: u32, height: u32) -> Vec<u8> {
+    let mut buf = vec![0u8; (width * height * 4) as usize];
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = ((y * width + x) * 4) as usize;
+
+            let r = 255u8;
+            let g = 0;
+            let b = 0;
+            let a = 255u8;
+
+            buf[idx] = r;
+            buf[idx + 1] = g;
+            buf[idx + 2] = b;
+            buf[idx + 3] = a;
+        }
+    }
+
+    buf
+}

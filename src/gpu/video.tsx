@@ -2,21 +2,20 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useCurrentFrame, useSetGlobalCurrentFrame } from "../lib/frame";
 import { PROJECT_SETTINGS } from "../../project/project";
-import { useIsPlaying } from "../StudioApp";
+import { useIsPlaying, useIsRender } from "../StudioApp";
 import { useClipActive, useClipStart, useProvideClipDuration } from "../lib/clip";
+import { VideoCanvasWGPU } from "./video-wgpu";
 
 export type Video = {
   path: string
 }
 
-type VideoCanvasProps = {
+export type VideoProps = {
   video: Video | string
   style?: CSSProperties
 }
 
-const videoLengthCache = new Map<string, number>()
-
-const normalizeVideo = (video: Video | string): Video => {
+export const normalizeVideo = (video: Video | string): Video => {
   if (typeof video === "string") return { path: video }
   return video
 }
@@ -33,8 +32,8 @@ const buildMetaUrl = (video: Video) => {
   return url.toString();
 }
 
-// 非 async で長さ（フレーム数）を取得。2 回目以降はキャッシュを返す。
-// 返り値はプロジェクトの FPS に合わせたフレーム数（動画 FPS と異なる場合があるので duration を換算）。
+const videoLengthCache = new Map<string, number>()
+
 export const video_length = (video: Video | string): number => {
   const resolved = normalizeVideo(video)
 
@@ -48,7 +47,7 @@ export const video_length = (video: Video | string): number => {
     xhr.send()
 
     if (xhr.status >= 200 && xhr.status < 300) {
-      const payload = JSON.parse(xhr.responseText) as { duration_ms?: number }
+      const payload = JSON.parse(xhr.responseText) as { duration_ms?: number, fps?: number }
       const seconds = typeof payload.duration_ms === "number"
         ? Math.max(0, payload.duration_ms) / 1000
         : 0
@@ -64,7 +63,45 @@ export const video_length = (video: Video | string): number => {
   return 0
 }
 
-export const VideoCanvas = ({ video, style }: VideoCanvasProps) => {
+const videoFpsCache = new Map<string, number>()
+
+export const video_fps = (video: Video | string): number => {
+  const resolved = normalizeVideo(video)
+
+  if (videoFpsCache.has(resolved.path)) {
+    return videoFpsCache.get(resolved.path)!
+  }
+
+  try {
+    const xhr = new XMLHttpRequest()
+    xhr.open("GET", buildMetaUrl(resolved), false) // 同期リクエストで初期ロード用途
+    xhr.send()
+
+    if (xhr.status >= 200 && xhr.status < 300) {
+      const payload = JSON.parse(xhr.responseText) as { duration_ms?: number, fps?: number }
+      const fps = typeof payload.fps === "number" ? payload.fps : 0
+      videoFpsCache.set(resolved.path, fps)
+      return fps
+    }
+  } catch (error) {
+    console.error("video_fps(): failed to fetch metadata", error)
+  }
+
+  videoFpsCache.set(resolved.path, 0)
+  return 0
+}
+
+export const Video = ({ video, style }: VideoProps) => {
+  const isRender = useIsRender()
+
+  if (isRender) {
+    return <VideoCanvasWGPU video={video} style={style} />
+  } else {
+    return <VideoCanvas video={video} style={style} />
+  }
+}
+
+const VideoCanvas = ({ video, style }: VideoProps) => {
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const elementRef = useRef<HTMLVideoElement | null>(null);
   const currentFrame = useCurrentFrame()

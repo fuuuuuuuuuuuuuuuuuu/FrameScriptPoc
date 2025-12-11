@@ -9,6 +9,7 @@ type StudioState = {
   isPlaying: boolean
   setIsPlaying: (flag: boolean) => void
   isPlayingStore: Store<boolean>
+  isRender: boolean
 }
 
 export const StudioStateContext = createContext<StudioState | null>(null)
@@ -134,7 +135,7 @@ export const StudioApp = () => {
   );
 
   return (
-    <StudioStateContext value={{ isPlaying, setIsPlaying, isPlayingStore }}>
+    <StudioStateContext value={{ isPlaying, setIsPlaying, isPlayingStore, isRender: false }}>
       <WithCurrentFrame>
         <div style={{ padding: 16, height: "100vh", boxSizing: "border-box", minHeight: 0 }}>
           <div
@@ -245,3 +246,9 @@ export const useIsPlayingStore = () => {
   if (!ctx) throw new Error("useIsPlayingStore must be used inside <StudioStateContext>");
   return ctx.isPlayingStore;
 };
+
+export const useIsRender = () => {
+  const ctx = useContext(StudioStateContext);
+  if (!ctx) throw new Error("useIsRender must be used inside <StudioStateContext>");
+  return ctx.isRender;
+}

@@ -38,3 +38,25 @@ pub fn probe_video_duration_ms(path: &str) -> Result<u64, String> {
 
     Err("failed to read duration".to_string())
 }
+
+pub fn probe_video_fps(path: &str) -> Result<f64, String> {
+    ffmpeg::init().map_err(|error| format!("ffmpeg::init failed: {}", error))?;
+
+    let ictx = ffmpeg::format::input(path).map_err(|_| format!("failed to open input: {path}"))?;
+
+    let stream = ictx
+        .streams()
+        .best(ffmpeg::media::Type::Video)
+        .ok_or_else(|| "Not video!".to_string())?;
+
+    let avg = stream.avg_frame_rate();
+
+    let mut fps: f64 = avg.into();
+
+    if fps == 0.0 {
+        let rate = stream.rate(); // AVStream.r_frame_rate 相当
+        fps = f64::from(rate);
+    }
+
+    Ok(fps)
+}

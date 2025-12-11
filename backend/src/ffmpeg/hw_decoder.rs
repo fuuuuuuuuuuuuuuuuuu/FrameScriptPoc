@@ -14,6 +14,7 @@ use std::sync::LazyLock;
 
 use ffmpeg::ffi;
 
+use crate::decoder::generate_empty_frame;
 use crate::util::AtomicCell;
 use crate::util::macros::once;
 use std::sync::{Arc, Mutex};
@@ -74,13 +75,7 @@ impl SharedHwDevice {
         let mut raw: *mut ffi::AVBufferRef = ptr::null_mut();
 
         let ret = unsafe {
-            ffi::av_hwdevice_ctx_create(
-                &mut raw,
-                device_type,
-                ptr::null(),
-                ptr::null_mut(),
-                0,
-            )
+            ffi::av_hwdevice_ctx_create(&mut raw, device_type, ptr::null(), ptr::null_mut(), 0)
         };
 
         if ret < 0 {
@@ -266,7 +261,10 @@ pub fn extract_frame_window_hw_rgba(
             ffi::AVSEEK_FLAG_BACKWARD,
         );
         if ret < 0 {
-            info!("av_seek_frame failed (fallback to start decode): {}", ffmpeg_error_string(ret));
+            info!(
+                "av_seek_frame failed (fallback to start decode): {}",
+                ffmpeg_error_string(ret)
+            );
         } else {
             decoder.flush();
         }
@@ -288,15 +286,18 @@ pub fn extract_frame_window_hw_rgba(
             .map_err(|error| format!("send_packet failed: {error}"))?;
 
         while decoder.receive_frame(&mut decoded).is_ok() {
-            let frame_index = decoded.timestamp().map(|ts| {
-                let ts_f = ts as f64 * tb_num as f64 / tb_den as f64;
-                let fps_f = fps_num as f64 / fps_den as f64;
-                (ts_f * fps_f).round().max(0.0) as usize
-            }).unwrap_or_else(|| {
-                let idx = fallback_index;
-                fallback_index = fallback_index.saturating_add(1);
-                idx
-            });
+            let frame_index = decoded
+                .timestamp()
+                .map(|ts| {
+                    let ts_f = ts as f64 * tb_num as f64 / tb_den as f64;
+                    let fps_f = fps_num as f64 / fps_den as f64;
+                    (ts_f * fps_f).round().max(0.0) as usize
+                })
+                .unwrap_or_else(|| {
+                    let idx = fallback_index;
+                    fallback_index = fallback_index.saturating_add(1);
+                    idx
+                });
 
             if frame_index > end_frame {
                 break;
@@ -326,15 +327,18 @@ pub fn extract_frame_window_hw_rgba(
         .map_err(|error| format!("failed to send EOF : {}", error))?;
 
     while decoder.receive_frame(&mut decoded).is_ok() {
-        let frame_index = decoded.timestamp().map(|ts| {
-            let ts_f = ts as f64 * tb_num as f64 / tb_den as f64;
-            let fps_f = fps_num as f64 / fps_den as f64;
-            (ts_f * fps_f).round().max(0.0) as usize
-        }).unwrap_or_else(|| {
-            let idx = fallback_index;
-            fallback_index = fallback_index.saturating_add(1);
-            idx
-        });
+        let frame_index = decoded
+            .timestamp()
+            .map(|ts| {
+                let ts_f = ts as f64 * tb_num as f64 / tb_den as f64;
+                let fps_f = fps_num as f64 / fps_den as f64;
+                (ts_f * fps_f).round().max(0.0) as usize
+            })
+            .unwrap_or_else(|| {
+                let idx = fallback_index;
+                fallback_index = fallback_index.saturating_add(1);
+                idx
+            });
 
         if frame_index > end_frame {
             break;
@@ -365,14 +369,14 @@ pub fn extract_frame_window_hw_rgba(
     Ok(results)
 }
 
-/// 単一フレーム用の薄いラッパー。互換性維持のために提供。
 pub fn extract_frame_hw_rgba(
     path: &str,
     target_frame: usize,
     dst_width: u32,
     dst_height: u32,
 ) -> Result<Vec<u8>, String> {
-    let frames = extract_frame_window_hw_rgba(path, target_frame, target_frame, dst_width, dst_height)?;
+    let frames =
+        extract_frame_window_hw_rgba(path, target_frame, target_frame, dst_width, dst_height)?;
     if let Some((_, data)) = frames.into_iter().next() {
         Ok(data)
     } else {
@@ -451,26 +455,4 @@ fn hw_frame_to_rgba(
     }
 
     Ok(buf)
-}
-
-fn generate_empty_frame(width: u32, height: u32) -> Vec<u8> {
-    let mut buf = vec![0u8; (width * height * 4) as usize];
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = ((y * width + x) * 4) as usize;
-
-            let r = 0;
-            let g = 0;
-            let b = 0;
-            let a = 255u8;
-
-            buf[idx] = r;
-            buf[idx + 1] = g;
-            buf[idx + 2] = b;
-            buf[idx + 3] = a;
-        }
-    }
-
-    buf
 }

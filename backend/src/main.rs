@@ -28,7 +28,11 @@ use tokio::net::TcpListener;
 use tokio_util::io::ReaderStream;
 use tracing::{error, info};
 
-use crate::{decoder::DECODER, util::resolve_path_to_string};
+use crate::{
+    decoder::{DECODER, generate_empty_frame},
+    ffmpeg::{hw_decoder, probe_video_duration_ms, probe_video_fps},
+    util::resolve_path_to_string,
+};
 
 #[derive(Deserialize)]
 struct VideoQuery {
@@ -59,7 +63,10 @@ async fn main() {
     let app = Router::new()
         .route("/ws", get(ws_handler))
         .route("/video", get(video_handler).options(options_handler))
-        .route("/video/meta", get(video_meta_handler).options(options_handler))
+        .route(
+            "/video/meta",
+            get(video_meta_handler).options(options_handler),
+        )
         .route("/audio", get(audio_handler).options(options_handler))
         .route("/healthz", get(healthz_handler).options(options_handler))
         .with_state(app_state);
@@ -257,6 +264,7 @@ async fn healthz_handler() -> impl IntoResponse {
 #[derive(Serialize)]
 struct VideoMetadataResponse {
     duration_ms: u64,
+    fps: f64,
 }
 
 async fn video_meta_handler(
@@ -265,12 +273,11 @@ async fn video_meta_handler(
 ) -> Result<impl IntoResponse, StatusCode> {
     let resolved_path = resolve_path_to_string(&path).map_err(|_| StatusCode::BAD_REQUEST)?;
     let duration_ms =
-        tokio::task::spawn_blocking(move || crate::ffmpeg::probe_video_duration_ms(&resolved_path))
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        probe_video_duration_ms(&resolved_path).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let mut resp = Json(VideoMetadataResponse { duration_ms }).into_response();
+    let fps = probe_video_fps(&resolved_path).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let mut resp = Json(VideoMetadataResponse { duration_ms, fps }).into_response();
     apply_cors(resp.headers_mut());
     Ok(resp)
 }
@@ -289,6 +296,7 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
 
         match msg {
             Message::Text(text) => {
+                println!("REQUESTED!");
                 let req: FrameRequest = match serde_json::from_str(&text) {
                     Ok(r) => r,
                     Err(e) => {
@@ -301,11 +309,11 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
                 let height = req.height;
                 let frame_index = req.frame;
 
-                let decoder = DECODER
-                    .decoder(resolve_path_to_string(&req.video).unwrap_or(req.video))
-                    .await;
+                let path = resolve_path_to_string(&req.video).unwrap_or_default();
 
-                let frame_rgba = decoder.request_frame(width, height, frame_index as _).await;
+                let frame_rgba =
+                    hw_decoder::extract_frame_hw_rgba(&path, frame_index as _, width, height)
+                        .unwrap_or(generate_dummy_frame(width, height, frame_index, &path));
 
                 // into [width][height][frame_index][rgba...] packet
                 let mut packet = Vec::with_capacity(12 + frame_rgba.len());
@@ -315,6 +323,8 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
                 packet.extend_from_slice(&frame_rgba);
 
                 let bytes = Bytes::from(packet);
+
+                println!("SEND!");
 
                 if let Err(e) = socket.send(Message::Binary(bytes)).await {
                     error!("failed to send frame: {e}");
@@ -343,9 +353,18 @@ async fn options_handler() -> impl IntoResponse {
 }
 
 fn apply_cors(headers: &mut HeaderMap) {
-    headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
-    headers.insert(header::ACCESS_CONTROL_ALLOW_METHODS, HeaderValue::from_static("GET, OPTIONS"));
-    headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("*"));
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static("*"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static("GET, OPTIONS"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        HeaderValue::from_static("*"),
+    );
 }
 
 fn generate_dummy_frame(width: u32, height: u32, frame: u32, video: &str) -> Vec<u8> {

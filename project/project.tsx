@@ -1,4 +1,4 @@
-import { VideoCanvas } from "../src/gpu/video"
+import { Video } from "../src/gpu/video"
 import { Clip, ClipSequence } from "../src/lib/clip"
 import { seconds, useCurrentFrame } from "../src/lib/frame"
 import { Project, type ProjectSettings } from "../src/lib/project"
@@ -17,21 +17,13 @@ export const PROJECT = () => {
     return (
         <Project>
             <TimeLine>
-                <Clip duration={seconds(3)} label="Clip1">
-                    <Text />
-                </Clip>
                 <ClipSequence>
-                    <ClipSequence>
-                        <Clip duration={seconds(3)}>
-                            <Text />
-                        </Clip>
-                        <Clip>
-                            <VideoCanvas video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
-                        </Clip>
-                        <Clip duration={seconds(3)}>
-                            <Text />
-                        </Clip>
-                    </ClipSequence>
+                    <Clip>
+                        <Video video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
+                    </Clip>
+                    <Clip duration={seconds(3)}>
+                        <Text />
+                    </Clip>
                 </ClipSequence>
             </TimeLine>
         </Project>
