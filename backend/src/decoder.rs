@@ -75,7 +75,16 @@ enum FrameState {
 }
 
 static ENTIRE_CACHE_SIZE: AtomicUsize = AtomicUsize::new(0);
-const MAX_CACHE_SIZE: usize = 1024 * 1024 * 1024 * 4; // 4GiB
+static MAX_CACHE_SIZE: LazyLock<usize> = LazyLock::new(|| {
+    match std::env::var("MAX_CACHE_SIZE")
+        .ok()
+        .map(|size| size.parse::<usize>().ok())
+        .flatten()
+    {
+        Some(size) => size,
+        None => 1024 * 1024 * 1024 * 4, // 4GiB
+    }
+});
 
 impl CachedDecoder {
     pub fn new(path: String, width: u32, height: u32) -> Self {
@@ -115,8 +124,8 @@ impl CachedDecoder {
                 const CHUNK: usize = 120;
 
                 loop {
-                    if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= MAX_CACHE_SIZE {
-                        // レスポンスが送信されてキャッシュが減るのを待つ
+                    if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= *MAX_CACHE_SIZE {
+                        // キャッシュが減るのを待つ
                         tokio::time::sleep(Duration::from_secs(1)).await;
                     }
 
@@ -167,7 +176,7 @@ impl CachedDecoder {
 
         tokio::spawn(async move {
             loop {
-                if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= MAX_CACHE_SIZE {
+                if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= *MAX_CACHE_SIZE {
                     let mut frames = self_clone.inner.frames.write().unwrap();
 
                     let all_frame_index = frames.keys().cloned().collect::<Vec<_>>();
@@ -183,21 +192,18 @@ impl CachedDecoder {
                         if future.is_completed() && frame_state == FrameState::None {
                             let future = frames.remove(&frame_index).unwrap();
                             frame_states.insert(frame_index, FrameState::Drop);
-                            println!(
-                                "REMOVED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                            );
 
                             ENTIRE_CACHE_SIZE
                                 .fetch_sub(future.get_now().unwrap().len(), Ordering::Relaxed);
 
-                            if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) < MAX_CACHE_SIZE {
+                            if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) < *MAX_CACHE_SIZE {
                                 break;
                             }
                         }
                     }
                 }
 
-                tokio::time::sleep(Duration::from_secs(10)).await;
+                tokio::time::sleep(Duration::from_secs(5)).await;
             }
         });
     }

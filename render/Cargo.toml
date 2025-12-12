@@ -1,0 +1,13 @@
+# !tyml @cargo/Cargo
+[package]
+name = "frame-script-render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1.48.0", features = [ "full" ] }
+chromiumoxide = { version = "0.8.0", default-features = false, features = [ "async-std-runtime" ] }
+futures = "0.3.31"
+tempfile = "3.23.0"
+num_threads = "0.1.7"
+ffmpeg-next = "8.0.0"
