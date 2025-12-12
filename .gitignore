@@ -15,6 +15,7 @@ dist-render
 *.local
 
 target
+frames
 
 # Editor directories and files
 .vscode/*

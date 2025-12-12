@@ -1,28 +1,15 @@
 pub mod ffmpeg;
 
 use std::{
-    fs::canonicalize,
-    io,
     path::Path,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
 use chromiumoxide::{
-    Browser, Handler, Page,
-    cdp::browser_protocol::{
-        emulation::{SetVirtualTimePolicyParams, VirtualTimePolicy},
-        page::CaptureScreenshotFormat,
-    },
-    error::CdpError,
-    handler::viewport::Viewport,
-    page::ScreenshotParams,
+    Browser, Handler, Page, cdp::browser_protocol::page::CaptureScreenshotFormat,
+    handler::viewport::Viewport, page::ScreenshotParams,
 };
 use futures::{StreamExt, stream::FuturesUnordered};
-use tokio::{
-    runtime::{Builder, Runtime},
-    sync::Semaphore,
-};
 
 use chromiumoxide::browser::BrowserConfig;
 use std::path::PathBuf;
@@ -84,9 +71,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("Invalid command(split).".into());
     }
 
-    let max_parallel = 4usize; // ここを調整（まずは 2〜4 推奨）
-    let sem = Arc::new(Semaphore::new(max_parallel));
-
     let width = splited[0].parse::<u32>()?;
     let height = splited[1].parse::<u32>()?;
     let fps = splited[2].parse::<f64>()?;
@@ -102,11 +86,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut tasks = FuturesUnordered::new();
 
+    static DIRECTORY: &'static str = "frames";
+
+    tokio::fs::remove_dir_all(DIRECTORY).await?;
+    tokio::fs::create_dir(DIRECTORY).await?;
+
     let start = Instant::now();
 
     for worker_id in 0..workers {
-        let permit = sem.clone().acquire_owned().await.unwrap();
-
         let start = worker_id * chunk;
         let end = ((worker_id + 1) * chunk).min(total_frames);
 
@@ -114,15 +101,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let preset_clone = preset.clone();
 
         tasks.push(tokio::spawn(async move {
-            let _permit = permit;
-
             let (mut browser, mut handler) = spawn_browser_instance(worker_id, width, height)
                 .await
                 .unwrap();
 
             tokio::spawn(async move { while handler.next().await.is_some() {} });
 
-            let out = format!("frames/segment-{worker_id:03}.mp4");
+            let out = format!("{}/segment-{worker_id:03}.mp4", DIRECTORY);
+
             let mut writer = SegmentWriter::new(
                 &out,
                 width,
@@ -182,6 +168,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     while let Some(_) = tasks.next().await {}
+
+    let mut segs = Vec::new();
+
+    for worker_id in 0..workers {
+        let path = PathBuf::from(format!("{}/segment-{worker_id:03}.mp4", DIRECTORY));
+        if tokio::fs::metadata(&path).await.is_ok() {
+            segs.push(path);
+        }
+    }
+
+    crate::ffmpeg::concat_segments_mp4(segs, &PathBuf::from("frames/output.mp4")).await?;
 
     println!("TOTAL : {}[ms]", start.elapsed().as_millis());
 

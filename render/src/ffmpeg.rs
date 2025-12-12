@@ -1,6 +1,11 @@
-use std::{error::Error, process::Stdio};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+    process::Stdio,
+};
 
 use tokio::{
+    fs,
     io::AsyncWriteExt,
     process::{Child, ChildStdin, Command},
 };
@@ -101,4 +106,61 @@ impl SegmentWriter {
         }
         Ok(())
     }
+}
+
+fn escape_concat_path(p: &str) -> String {
+    p.replace('\'', r"'\''")
+}
+
+pub async fn concat_segments_mp4(
+    segments: Vec<PathBuf>,
+    output_path: &Path,
+) -> Result<(), Box<dyn Error>> {
+    if segments.is_empty() {
+        return Err("No segment files.".into());
+    }
+
+    let list_path = output_path.with_extension("segments.txt");
+
+    let mut lines = String::new();
+    for seg in segments {
+        let abs = tokio::task::spawn_blocking(move || std::fs::canonicalize(seg))
+            .await??
+            .to_string_lossy()
+            .to_string();
+
+        lines.push_str("file '");
+        lines.push_str(&escape_concat_path(&abs));
+        lines.push_str("'\n");
+    }
+
+    fs::write(&list_path, lines).await?;
+
+    let status = Command::new("ffmpeg")
+        .arg("-y")
+        .arg("-hide_banner")
+        .arg("-loglevel")
+        .arg("error")
+        .arg("-f")
+        .arg("concat")
+        .arg("-safe")
+        .arg("0")
+        .arg("-i")
+        .arg(&list_path)
+        .arg("-c")
+        .arg("copy")
+        .arg("-movflags")
+        .arg("+faststart")
+        .arg(output_path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit())
+        .status()
+        .await?;
+
+    if !status.success() {
+        return Err(format!("ffmpeg concat failed: {}", status).into());
+    }
+
+    Ok(())
 }
