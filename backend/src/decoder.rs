@@ -3,12 +3,13 @@ use std::{
     num::NonZero,
     sync::{
         Arc, LazyLock, Mutex, RwLock,
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     time::Duration,
 };
 
 use num_threads::num_threads;
+use tokio::time::timeout;
 
 use crate::{
     ffmpeg::{
@@ -65,6 +66,7 @@ struct Inner {
     frames: RwLock<HashMap<u32, SharedManualFuture<Vec<u8>>>>,
     frame_states: RwLock<HashMap<u32, FrameState>>,
     total_frames: AtomicUsize,
+    running_decode_tasks: AtomicUsize,
 }
 
 #[repr(u8)]
@@ -96,6 +98,7 @@ impl CachedDecoder {
             frames: RwLock::new(HashMap::new()),
             frame_states: RwLock::new(HashMap::new()),
             total_frames: AtomicUsize::new(0),
+            running_decode_tasks: AtomicUsize::new(0),
         };
 
         Self {
@@ -115,12 +118,17 @@ impl CachedDecoder {
 
         self.schedule_gc().await;
 
-        let workers = num_threads().unwrap_or(NonZero::new(1).unwrap()).get();
+        let workers = 20;
+
         let chunk = total_frames / (workers - 1).max(1);
 
         for worker_id in 0..workers {
+            self.inner
+                .running_decode_tasks
+                .fetch_add(1, Ordering::Relaxed);
+
             let worker_start = worker_id * chunk;
-            let worker_end = ((worker_id + 1) * chunk).min(total_frames) - 1;
+            let worker_end = ((worker_id + 1) * chunk).min(total_frames);
 
             let self_clone = self.clone();
 
@@ -138,7 +146,7 @@ impl CachedDecoder {
                     let result = hw_decoder::extract_frame_window_hw_rgba(
                         &self_clone.inner.path,
                         start,
-                        end,
+                        end - 1,
                         self_clone.inner.width,
                         self_clone.inner.height,
                     );
@@ -172,6 +180,11 @@ impl CachedDecoder {
                     }
                     start = end;
                 }
+
+                self_clone
+                    .inner
+                    .running_decode_tasks
+                    .fetch_sub(1, Ordering::Relaxed);
             });
         }
     }
@@ -248,7 +261,54 @@ impl CachedDecoder {
                 .clone()
         };
 
-        let frame = future.get().await;
+        let frame;
+
+        loop {
+            match timeout(Duration::from_secs(1), future.get()).await {
+                Ok(result) => {
+                    frame = result;
+                    break;
+                }
+                Err(_) => match self.inner.running_decode_tasks.load(Ordering::Relaxed) > 0 {
+                    true => continue,
+                    false => {
+                        // 多分ドロップフレーム
+                        // frame_indexに穴がある場合
+                        // 直前のフレームを持ってくる
+                        let mut frame_index = frame_index;
+                        loop {
+                            match frame_index.checked_sub(1) {
+                                Some(new_index) => {
+                                    frame_index = new_index;
+
+                                    let frames = self.inner.frames.read().unwrap();
+
+                                    match frames.get(&frame_index) {
+                                        Some(future) => match future.get_now() {
+                                            Some(result) => {
+                                                frame = result;
+                                                break;
+                                            }
+                                            None => continue,
+                                        },
+                                        None => continue,
+                                    }
+                                }
+                                None => {
+                                    frame = Arc::new(generate_empty_frame(
+                                        self.inner.width,
+                                        self.inner.height,
+                                    ));
+                                    break;
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                },
+            }
+        }
 
         {
             // 送信が終わったフレームは解放する。
@@ -268,11 +328,7 @@ impl CachedDecoder {
 
     pub fn total_frames(&self) -> Option<usize> {
         let v = self.inner.total_frames.load(Ordering::Relaxed);
-        if v > 0 {
-            Some(v)
-        } else {
-            None
-        }
+        if v > 0 { Some(v) } else { None }
     }
 }
 

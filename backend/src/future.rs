@@ -49,7 +49,7 @@ impl<T: Send> SharedManualFuture<T> {
             let mut value = self.value.lock().unwrap();
 
             if value.0.is_some() {
-                panic!("double complete!");
+                return;
             }
 
             value.0 = Some(complete_value.clone());
