@@ -376,7 +376,7 @@ pub fn extract_frame_hw_rgba(
     dst_height: u32,
 ) -> Result<Vec<u8>, String> {
     let frames =
-        extract_frame_window_hw_rgba(path, target_frame, target_frame, dst_width, dst_height)?;
+        extract_frame_window_hw_rgba(path, target_frame, target_frame + 1, dst_width, dst_height)?;
     if let Some((_, data)) = frames.into_iter().next() {
         Ok(data)
     } else {

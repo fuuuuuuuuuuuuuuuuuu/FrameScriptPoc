@@ -3,7 +3,7 @@ pub mod ffmpeg;
 pub mod future;
 pub mod util;
 
-use std::{net::SocketAddr, ops::Bound, sync::Arc};
+use std::{net::SocketAddr, ops::Bound};
 
 use axum::{
     Router,
@@ -26,7 +26,7 @@ use tokio_util::io::ReaderStream;
 use tracing::{error, info};
 
 use crate::{
-    decoder::{generate_empty_frame, set_decode_workers, DECODER},
+    decoder::{DECODER, DecoderKey, set_max_cache_size},
     ffmpeg::{probe_video_duration_ms, probe_video_fps},
     util::resolve_path_to_string,
 };
@@ -53,8 +53,8 @@ struct FrameRequest {
 }
 
 #[derive(Deserialize)]
-struct WorkersRequest {
-    workers: usize,
+struct CacheSizeRequest {
+    gib: usize,
 }
 
 #[tokio::main]
@@ -74,7 +74,10 @@ async fn main() {
             get(video_meta_handler).options(options_handler),
         )
         .route("/audio", get(audio_handler).options(options_handler))
-        .route("/set_workers", post(set_workers_handler).options(options_handler))
+        .route(
+            "/set_cache_size",
+            post(set_cache_size_handler).options(options_handler),
+        )
         .route("/healthz", get(healthz_handler).options(options_handler))
         .with_state(app_state);
 
@@ -314,24 +317,18 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
 
                 let width = req.width;
                 let height = req.height;
-                let requested_frame = req.frame;
+                let target_frame = req.frame;
 
                 let path = resolve_path_to_string(&req.video).unwrap_or_default();
 
-                let decoder = DECODER.decoder(path, width, height).await;
-                let total_frames = decoder.total_frames();
-                let out_of_range = total_frames
-                    .map(|t| t == 0 || requested_frame as usize >= t)
-                    .unwrap_or(false);
-                let target_frame = total_frames
-                    .map(|t| requested_frame.min(t.saturating_sub(1) as u32))
-                    .unwrap_or(requested_frame);
-
-                let frame_rgba: Arc<Vec<u8>> = if out_of_range {
-                    Arc::new(generate_empty_frame(width, height))
-                } else {
-                    decoder.get_frame(target_frame).await
-                };
+                let decoder = DECODER
+                    .cached_decoder(DecoderKey {
+                        path,
+                        width,
+                        height,
+                    })
+                    .await;
+                let frame_rgba = decoder.get_frame(target_frame).await;
 
                 // into [width][height][frame_index][rgba...] packet
                 let mut packet = Vec::with_capacity(12 + frame_rgba.len());
@@ -370,15 +367,16 @@ async fn options_handler() -> impl IntoResponse {
     (headers, StatusCode::NO_CONTENT)
 }
 
-async fn set_workers_handler(
+async fn set_cache_size_handler(
     State(_state): State<AppState>,
-    Json(payload): Json<WorkersRequest>,
+    Json(payload): Json<CacheSizeRequest>,
 ) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     apply_cors(&mut headers);
 
-    let workers = payload.workers.max(1).min(128);
-    set_decode_workers(workers);
+    let gib = payload.gib.max(1).min(128); // clamp to a sane range
+    let bytes = gib as usize * 1024 * 1024 * 1024;
+    set_max_cache_size(bytes);
 
     (headers, StatusCode::OK)
 }

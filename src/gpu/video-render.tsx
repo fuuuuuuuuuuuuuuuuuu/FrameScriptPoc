@@ -106,6 +106,13 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
           ? Math.min(Math.max(playbackFrameRaw, 0), playbackMax)
           : Math.max(playbackFrameRaw, 0);
 
+      const alreadyDrawn =
+        lastDrawnFrameRef.current != null && lastDrawnFrameRef.current >= clampedFrame;
+      const hasPendingSamePlayback = pendingMapRef.current.has(playbackFrame);
+      if (alreadyDrawn && !hasPendingSamePlayback) {
+        return;
+      }
+
       const manual = createManualPromise();
       trackPending(manual);
 

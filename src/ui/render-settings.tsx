@@ -48,6 +48,7 @@ export const RenderSettingsPage = () => {
   });
   const [encode, setEncode] = useState<"H264" | "H265">("H264");
   const [preset, setPreset] = useState("medium");
+  const [cacheGiB, setCacheGiB] = useState(4);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [platformLabel, setPlatformLabel] = useState("(detecting)");
@@ -110,15 +111,14 @@ export const RenderSettingsPage = () => {
     setStatus(null);
     try {
       try {
-        await fetch("http://127.0.0.1:3000/set_workers", {
+        await fetch("http://127.0.0.1:3000/set_cache_size", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ workers: Number(workers) }),
+          body: JSON.stringify({ gib: Number(cacheGiB) }),
         });
       } catch (_error) {
-        // ignore; render will still try to start
+        // ignore; still try to start render
       }
-
       const result = await window.renderAPI.startRender({
         width: Number(width),
         height: Number(height),
@@ -209,6 +209,17 @@ export const RenderSettingsPage = () => {
               </option>
             ))}
           </select>
+        </div>
+        <div style={fieldStyle}>
+          <label style={{ fontSize: 12, color: "#cbd5e1" }}>Cache size (GiB)</label>
+          <input
+            type="number"
+            min={1}
+            max={128}
+            value={cacheGiB}
+            onChange={(e) => setCacheGiB(Number(e.target.value))}
+            style={inputStyle}
+          />
         </div>
       </div>
 

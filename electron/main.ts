@@ -247,7 +247,7 @@ function createRenderSettingsWindow() {
 
   renderSettingsWindow = new BrowserWindow({
     width: 640,
-    height: 450,
+    height: 550,
     resizable: false,
     minimizable: false,
     maximizable: false,

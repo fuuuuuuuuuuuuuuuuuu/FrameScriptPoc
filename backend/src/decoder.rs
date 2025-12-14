@@ -1,68 +1,62 @@
 use std::{
-    collections::HashMap,
-    num::NonZero,
+    collections::{HashMap, HashSet},
     sync::{
         Arc, LazyLock, Mutex, RwLock,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
 };
 
-use num_threads::num_threads;
 use tokio::time::timeout;
 
-use crate::{
-    ffmpeg::{
-        hw_decoder::{self},
-        probe_video_frames,
-    },
-    future::SharedManualFuture,
-};
+use crate::{ffmpeg::hw_decoder, future::SharedManualFuture};
 
 pub static DECODER: LazyLock<Decoder> = LazyLock::new(|| Decoder::new());
-static DECODE_WORKERS: LazyLock<AtomicUsize> = LazyLock::new(|| {
-    let env_workers = std::env::var("DECODE_WORKERS")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok());
-    let cpu_workers = num_threads().map(|n| n.get()).unwrap_or(4);
-    let default = env_workers.unwrap_or(cpu_workers);
-    AtomicUsize::new(default.max(1))
-});
-
-pub fn set_decode_workers(workers: usize) {
-    DECODE_WORKERS.store(workers.max(1), Ordering::Relaxed);
-}
 
 pub struct Decoder {
-    decoders: Mutex<HashMap<String, CachedDecoder>>,
+    map: Mutex<HashMap<DecoderKey, CachedDecoder>>,
 }
 
 impl Decoder {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
-            decoders: Mutex::new(HashMap::new()),
+            map: Mutex::new(HashMap::new()),
         }
     }
 
-    pub async fn decoder(&self, path: String, width: u32, height: u32) -> CachedDecoder {
+    pub async fn cached_decoder(&self, key: DecoderKey) -> CachedDecoder {
         let mut generated = false;
-        let decoder = {
-            let mut decoders = self.decoders.lock().unwrap();
-            decoders
-                .entry(path.clone())
-                .or_insert_with(|| {
-                    generated = true;
-                    CachedDecoder::new(path, width, height)
-                })
-                .clone()
-        };
+        let decoder = self
+            .map
+            .lock()
+            .unwrap()
+            .entry(key.clone())
+            .or_insert_with(|| {
+                generated = true;
+                CachedDecoder::new(key)
+            })
+            .clone();
 
         if generated {
-            decoder.start().await;
+            decoder.schedule_gc().await;
         }
 
         decoder
     }
+}
+
+static ENTIRE_CACHE_SIZE: AtomicUsize = AtomicUsize::new(0);
+static MAX_CACHE_SIZE: AtomicUsize = AtomicUsize::new(1024 * 1024 * 1024 * 4); // Default: 4GiB
+
+pub fn set_max_cache_size(bytes: usize) {
+    MAX_CACHE_SIZE.store(bytes.max(1024 * 1024), Ordering::Relaxed);
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DecoderKey {
+    pub path: String,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -77,127 +71,30 @@ struct Inner {
     height: u32,
     frames: RwLock<HashMap<u32, SharedManualFuture<Vec<u8>>>>,
     frame_states: RwLock<HashMap<u32, FrameState>>,
-    total_frames: AtomicUsize,
+    decoding_frames: Mutex<HashSet<u32>>,
     running_decode_tasks: AtomicUsize,
 }
 
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum FrameState {
+    None,
     Wait,
     Drop,
-    None,
 }
 
-static ENTIRE_CACHE_SIZE: AtomicUsize = AtomicUsize::new(0);
-static MAX_CACHE_SIZE: LazyLock<usize> = LazyLock::new(|| {
-    match std::env::var("MAX_CACHE_SIZE")
-        .ok()
-        .map(|size| size.parse::<usize>().ok())
-        .flatten()
-    {
-        Some(size) => size,
-        None => 1024 * 1024 * 1024 * 4, // 4GiB
-    }
-});
-
 impl CachedDecoder {
-    pub fn new(path: String, width: u32, height: u32) -> Self {
+    fn new(key: DecoderKey) -> Self {
         let inner = Inner {
-            path,
-            width,
-            height,
+            path: key.path,
+            width: key.width,
+            height: key.height,
             frames: RwLock::new(HashMap::new()),
             frame_states: RwLock::new(HashMap::new()),
-            total_frames: AtomicUsize::new(0),
+            decoding_frames: Mutex::new(HashSet::new()),
             running_decode_tasks: AtomicUsize::new(0),
         };
-
         Self {
             inner: Arc::new(inner),
-        }
-    }
-
-    pub async fn start(&self) {
-        let total_frames = probe_video_frames(&self.inner.path).unwrap_or(0) as usize;
-        self.inner
-            .total_frames
-            .store(total_frames, Ordering::Relaxed);
-
-        if total_frames == 0 {
-            return;
-        }
-
-        self.schedule_gc().await;
-
-        let workers = DECODE_WORKERS.load(Ordering::Relaxed).max(1);
-
-        let chunk = total_frames / (workers - 1).max(1);
-
-        for worker_id in 0..workers {
-            self.inner
-                .running_decode_tasks
-                .fetch_add(1, Ordering::Relaxed);
-
-            let worker_start = worker_id * chunk;
-            let worker_end = ((worker_id + 1) * chunk).min(total_frames);
-
-            let self_clone = self.clone();
-
-            tokio::spawn(async move {
-                let mut start = worker_start;
-                const CHUNK: usize = 120;
-
-                loop {
-                    if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= *MAX_CACHE_SIZE {
-                        // キャッシュが減るのを待つ
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                    }
-
-                    let end = (start + CHUNK).min(worker_end);
-                    let result = hw_decoder::extract_frame_window_hw_rgba(
-                        &self_clone.inner.path,
-                        start,
-                        end - 1,
-                        self_clone.inner.width,
-                        self_clone.inner.height,
-                    );
-
-                    match result {
-                        Ok(result) => {
-                            let mut futures = Vec::new();
-
-                            {
-                                let mut frames = self_clone.inner.frames.write().unwrap();
-
-                                for (index, frame) in result {
-                                    let future = frames
-                                        .entry(index as _)
-                                        .or_insert_with(|| SharedManualFuture::new())
-                                        .clone();
-                                    futures.push((future, frame));
-                                }
-                            }
-
-                            for (future, frame) in futures {
-                                ENTIRE_CACHE_SIZE.fetch_add(frame.len(), Ordering::Relaxed);
-                                future.complete(Arc::new(frame)).await;
-                            }
-                        }
-                        Err(_) => todo!(),
-                    }
-
-                    if end == worker_end {
-                        break;
-                    }
-                    start = end;
-                }
-
-                self_clone
-                    .inner
-                    .running_decode_tasks
-                    .fetch_sub(1, Ordering::Relaxed);
-            });
         }
     }
 
@@ -206,12 +103,14 @@ impl CachedDecoder {
 
         tokio::spawn(async move {
             loop {
-                if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) >= *MAX_CACHE_SIZE {
+                if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed)
+                    >= MAX_CACHE_SIZE.load(Ordering::Relaxed)
+                {
                     let mut frames = self_clone.inner.frames.write().unwrap();
 
                     let all_frame_index = frames.keys().cloned().collect::<Vec<_>>();
 
-                    for frame_index in all_frame_index {
+                    for frame_index in all_frame_index.into_iter().rev() {
                         let future = frames.get(&frame_index).unwrap();
                         let mut frame_states = self_clone.inner.frame_states.write().unwrap();
                         let frame_state = frame_states
@@ -226,7 +125,9 @@ impl CachedDecoder {
                             ENTIRE_CACHE_SIZE
                                 .fetch_sub(future.get_now().unwrap().len(), Ordering::Relaxed);
 
-                            if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed) < *MAX_CACHE_SIZE {
+                            if ENTIRE_CACHE_SIZE.load(Ordering::Relaxed)
+                                < MAX_CACHE_SIZE.load(Ordering::Relaxed)
+                            {
                                 break;
                             }
                         }
@@ -240,13 +141,87 @@ impl CachedDecoder {
 
     pub async fn get_frame(&self, frame_index: u32) -> Arc<Vec<u8>> {
         {
-            let mut frame_states = self.inner.frame_states.write().unwrap();
-            let frame_state = frame_states
-                .get(&frame_index)
-                .cloned()
-                .unwrap_or(FrameState::None);
+            let mut decoding_frames = self.inner.decoding_frames.lock().unwrap();
 
-            if frame_state == FrameState::Wait || frame_state == FrameState::Drop {
+            const DECODE_CHUNK: u32 = 120;
+
+            if !decoding_frames.contains(&frame_index) {
+                let mut last_frame = frame_index;
+                for frame_index in frame_index..(frame_index + DECODE_CHUNK) {
+                    if decoding_frames.contains(&frame_index) {
+                        break;
+                    }
+                    last_frame = frame_index;
+                }
+
+                for frame_index in frame_index..=last_frame {
+                    decoding_frames.insert(frame_index);
+                }
+
+                self.inner
+                    .running_decode_tasks
+                    .fetch_add(1, Ordering::Relaxed);
+
+                let self_clone = self.clone();
+
+                tokio::spawn(async move {
+                    let result = hw_decoder::extract_frame_window_hw_rgba(
+                        &self_clone.inner.path,
+                        frame_index as _,
+                        last_frame as _,
+                        self_clone.inner.width,
+                        self_clone.inner.height,
+                    );
+
+                    match result {
+                        Ok(result) => {
+                            let futures = {
+                                let mut frames = self_clone.inner.frames.write().unwrap();
+
+                                let mut futures = Vec::new();
+                                for (frame_index, _) in result.iter() {
+                                    let future = frames
+                                        .entry(*frame_index as _)
+                                        .or_insert_with(|| SharedManualFuture::new())
+                                        .clone();
+                                    futures.push(future);
+                                }
+
+                                futures
+                            };
+
+                            for (future, (_, frame)) in futures.into_iter().zip(result.into_iter())
+                            {
+                                ENTIRE_CACHE_SIZE.fetch_add(frame.len(), Ordering::Relaxed);
+                                future.complete(Arc::new(frame)).await;
+                            }
+                        }
+                        Err(_) => todo!(),
+                    }
+
+                    self_clone
+                        .inner
+                        .running_decode_tasks
+                        .fetch_sub(1, Ordering::Relaxed);
+                });
+            }
+        }
+
+        {
+            let frame_state = {
+                let mut frame_states = self.inner.frame_states.write().unwrap();
+
+                let frame_state = frame_states
+                    .get(&frame_index)
+                    .cloned()
+                    .unwrap_or(FrameState::None);
+
+                frame_states.insert(frame_index, FrameState::Wait);
+
+                frame_state
+            };
+
+            if let FrameState::Drop | FrameState::Wait = frame_state {
                 let result = hw_decoder::extract_frame_hw_rgba(
                     &self.inner.path,
                     frame_index as _,
@@ -261,7 +236,6 @@ impl CachedDecoder {
                     Err(_) => todo!(),
                 }
             }
-            frame_states.insert(frame_index, FrameState::Wait);
         }
 
         let future = {
@@ -337,11 +311,6 @@ impl CachedDecoder {
 
         frame
     }
-
-    pub fn total_frames(&self) -> Option<usize> {
-        let v = self.inner.total_frames.load(Ordering::Relaxed);
-        if v > 0 { Some(v) } else { None }
-    }
 }
 
 pub fn generate_empty_frame(width: u32, height: u32) -> Vec<u8> {
@@ -364,29 +333,4 @@ pub fn generate_empty_frame(width: u32, height: u32) -> Vec<u8> {
     }
 
     buf
-}
-
-#[cfg(test)]
-mod test {
-    use std::time::Instant;
-
-    use tokio::runtime::Builder;
-
-    use crate::{decoder::DECODER, util::resolve_path_to_string};
-
-    #[test]
-    fn test() {
-        Builder::new_multi_thread()
-            .build()
-            .unwrap()
-            .block_on(async {
-                let start = Instant::now();
-                let path = resolve_path_to_string("~/Videos/1080p.mp4").unwrap();
-                let decoder = DECODER.decoder(path.clone(), 1920, 1080).await;
-
-                let _ = decoder.get_frame(600).await;
-
-                println!("{}[ms]", start.elapsed().as_millis());
-            });
-    }
 }
