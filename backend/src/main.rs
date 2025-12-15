@@ -101,6 +101,11 @@ async fn main() {
                 .get(get_progress_handler)
                 .options(options_handler),
         )
+        .route(
+            "/render_cancel",
+            post(render_cancel_handler).options(options_handler),
+        )
+        .route("/is_canceled", get(is_canceled_handler).options(options_handler))
         .route("/healthz", get(healthz_handler).options(options_handler))
         .with_state(app_state);
 
@@ -431,6 +436,20 @@ async fn get_progress_handler(State(_state): State<AppState>) -> impl IntoRespon
     };
 
     (headers, Json(response))
+}
+
+async fn render_cancel_handler(State(_state): State<AppState>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    apply_cors(&mut headers);
+    RENDER_CANCEL.store(1, Ordering::Relaxed);
+    (headers, StatusCode::OK)
+}
+
+async fn is_canceled_handler(State(_state): State<AppState>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    apply_cors(&mut headers);
+    let canceled = RENDER_CANCEL.load(Ordering::Relaxed) != 0;
+    (headers, Json(serde_json::json!({ "canceled": canceled })))
 }
 
 fn apply_cors(headers: &mut HeaderMap) {

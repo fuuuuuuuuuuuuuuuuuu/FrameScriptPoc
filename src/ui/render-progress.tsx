@@ -8,6 +8,8 @@ type Progress = {
 export const RenderProgressPage = () => {
   const [progress, setProgress] = useState<Progress>({ completed: 0, total: 0 });
   const isCompleted = progress.total > 0 && progress.completed >= progress.total;
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +28,7 @@ export const RenderProgressPage = () => {
     };
 
     tick();
-    const timer = window.setInterval(tick, 100);
+    const timer = window.setInterval(tick, 50);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -35,6 +37,21 @@ export const RenderProgressPage = () => {
 
   const pct =
     progress.total > 0 ? Math.min(100, Math.round((progress.completed / progress.total) * 100)) : 0;
+
+  const requestCancel = async () => {
+    setCancelBusy(true);
+    try {
+      await fetch("http://127.0.0.1:3000/render_cancel", {
+        method: "POST",
+      });
+      window.close();
+    } catch (_error) {
+      // ignore
+    } finally {
+      setCancelBusy(false);
+      setConfirmCancel(false);
+    }
+  };
 
   return (
     <div
@@ -90,7 +107,73 @@ export const RenderProgressPage = () => {
           {isCompleted ? "Completed!" : `${progress.completed} / ${progress.total} frames`}
         </div>
       </div>
-      <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 10, alignItems: "center" }}>
+        {confirmCancel ? (
+          <div
+            style={{
+              padding: "8px 10px",
+              background: "#111827",
+              border: "1px solid #1f2937",
+              borderRadius: 8,
+              color: "#e5e7eb",
+              fontSize: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            Cancel rendering?
+            <button
+              type="button"
+              onClick={requestCancel}
+              disabled={cancelBusy}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: "1px solid #991b1b",
+                background: cancelBusy ? "#7f1d1d" : "#b91c1c",
+                color: "#fef2f2",
+                cursor: cancelBusy ? "wait" : "pointer",
+                fontWeight: 600,
+              }}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmCancel(false)}
+              disabled={cancelBusy}
+              style={{
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: "1px solid #1f2937",
+                background: "#0f172a",
+                color: "#e5e7eb",
+                cursor: cancelBusy ? "not-allowed" : "pointer",
+              }}
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmCancel(true)}
+            disabled={cancelBusy}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 8,
+              border: "1px solid #1f2937",
+              background: "#0f172a",
+              color: "#e5e7eb",
+              cursor: cancelBusy ? "not-allowed" : "pointer",
+              minWidth: 100,
+              fontWeight: 600,
+            }}
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="button"
           disabled={!isCompleted}

@@ -9,12 +9,12 @@ use chromiumoxide::{
 use futures::{StreamExt, stream::FuturesUnordered};
 
 use chromiumoxide::browser::BrowserConfig;
-use std::path::PathBuf;
-use tempfile::TempDir;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use reqwest::Client;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use tempfile::TempDir;
 
 use crate::ffmpeg::SegmentWriter;
 
@@ -22,6 +22,11 @@ use crate::ffmpeg::SegmentWriter;
 struct ProgressPayload {
     completed: usize,
     total: usize,
+}
+
+#[derive(Deserialize)]
+struct CancelResponse {
+    canceled: bool,
 }
 
 async fn spawn_browser_instance(
@@ -93,6 +98,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let completed = Arc::new(AtomicUsize::new(0));
     let total_frames_usize = total_frames;
 
+    let cancel_url = std::env::var("RENDER_CANCEL_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3000/is_canceled".to_string());
+    let is_canceled = Arc::new(AtomicBool::new(false));
+    let is_canceled_clone = is_canceled.clone();
+    tokio::spawn(async move {
+        loop {
+            let client = Client::new();
+            let is_canceled = match client.get(&cancel_url).send().await {
+                Ok(resp) => match resp.json::<CancelResponse>().await {
+                    Ok(body) => body.canceled,
+                    Err(_) => false,
+                },
+                Err(_) => false,
+            };
+
+            if is_canceled {
+                is_canceled_clone.store(true, Ordering::Relaxed);
+                break;
+            }
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
+
     // initialize progress
     let _ = progress_client
         .post(&progress_url)
@@ -102,6 +131,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .send()
         .await;
+
+    // share progress
+    let progress_url_clone = progress_url.clone();
+    let completed_clone = completed.clone();
+    let is_canceled_clone = is_canceled.clone();
+    tokio::spawn(async move {
+        loop {
+            let _ = Client::new()
+                .post(&progress_url_clone)
+                .json(&ProgressPayload {
+                    completed: completed_clone.load(Ordering::Relaxed),
+                    total: total_frames,
+                })
+                .send()
+                .await;
+
+            if is_canceled_clone.load(Ordering::Relaxed) {
+                break;
+            }
+
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
 
     //let file = format!("file://{}", canonicalize("index.html")?.to_string_lossy());
     let url = std::env::var("RENDER_DEV_SERVER_URL")
@@ -124,9 +176,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let preset_clone = preset.clone();
 
         let page_url = url.clone();
-        let progress_client = progress_client.clone();
-        let progress_url = progress_url.clone();
-        let completed_counter = completed.clone();
+        let completed_clone = completed.clone();
+        let is_canceled_clone = is_canceled.clone();
         tasks.push(tokio::spawn(async move {
             let (mut browser, mut handler) = spawn_browser_instance(worker_id, width, height)
                 .await
@@ -187,16 +238,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 writer.write_png_frame(&bytes).await.unwrap();
 
-                let current = completed_counter.fetch_add(1, Ordering::Relaxed) + 1;
-                if current % 10 == 0 || current == total_frames {
-                    let _ = progress_client
-                        .post(&progress_url)
-                        .json(&ProgressPayload {
-                            completed: current,
-                            total: total_frames,
-                        })
-                        .send()
-                        .await;
+                completed_clone.fetch_add(1, Ordering::Relaxed);
+
+                if is_canceled_clone.load(Ordering::Relaxed) {
+                    break;
                 }
             }
 
