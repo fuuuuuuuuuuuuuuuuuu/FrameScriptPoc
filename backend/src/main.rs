@@ -3,7 +3,7 @@ pub mod ffmpeg;
 pub mod future;
 pub mod util;
 
-use std::{net::SocketAddr, ops::Bound};
+use std::{net::SocketAddr, ops::Bound, sync::atomic::AtomicBool};
 
 use axum::{
     Router,
@@ -20,11 +20,11 @@ use axum::{
 use axum_extra::{TypedHeader, headers::Range};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
 use tokio::net::TcpListener;
 use tokio_util::io::ReaderStream;
 use tracing::{error, info};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::{
     decoder::{DECODER, DecoderKey, set_max_cache_size},
@@ -72,7 +72,7 @@ struct ProgressResponse {
 
 static RENDER_COMPLETED: AtomicUsize = AtomicUsize::new(0);
 static RENDER_TOTAL: AtomicUsize = AtomicUsize::new(0);
-static RENDER_CANCEL: AtomicUsize = AtomicUsize::new(0);
+static RENDER_CANCEL: AtomicBool = AtomicBool::new(false);
 
 #[tokio::main]
 async fn main() {
@@ -105,7 +105,11 @@ async fn main() {
             "/render_cancel",
             post(render_cancel_handler).options(options_handler),
         )
-        .route("/is_canceled", get(is_canceled_handler).options(options_handler))
+        .route("/reset", post(reset_handler).options(options_handler))
+        .route(
+            "/is_canceled",
+            get(is_canceled_handler).options(options_handler),
+        )
         .route("/healthz", get(healthz_handler).options(options_handler))
         .with_state(app_state);
 
@@ -334,7 +338,6 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
 
         match msg {
             Message::Text(text) => {
-                println!("REQUESTED!");
                 let req: FrameRequest = match serde_json::from_str(&text) {
                     Ok(r) => r,
                     Err(e) => {
@@ -366,8 +369,6 @@ async fn handle_socket(mut socket: WebSocket, _state: AppState) {
                 packet.extend_from_slice(&frame_rgba);
 
                 let bytes = Bytes::from(packet);
-
-                println!("SEND!");
 
                 if let Err(e) = socket.send(Message::Binary(bytes)).await {
                     error!("failed to send frame: {e}");
@@ -420,7 +421,10 @@ async fn set_progress_handler(
         RENDER_TOTAL.store(total, Ordering::Relaxed);
     }
     if let Some(completed) = payload.completed {
-        RENDER_COMPLETED.store(completed.min(RENDER_TOTAL.load(Ordering::Relaxed)), Ordering::Relaxed);
+        RENDER_COMPLETED.store(
+            completed.min(RENDER_TOTAL.load(Ordering::Relaxed)),
+            Ordering::Relaxed,
+        );
     }
 
     (headers, StatusCode::OK)
@@ -441,15 +445,23 @@ async fn get_progress_handler(State(_state): State<AppState>) -> impl IntoRespon
 async fn render_cancel_handler(State(_state): State<AppState>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     apply_cors(&mut headers);
-    RENDER_CANCEL.store(1, Ordering::Relaxed);
+    RENDER_CANCEL.store(true, Ordering::Relaxed);
     (headers, StatusCode::OK)
 }
 
 async fn is_canceled_handler(State(_state): State<AppState>) -> impl IntoResponse {
     let mut headers = HeaderMap::new();
     apply_cors(&mut headers);
-    let canceled = RENDER_CANCEL.load(Ordering::Relaxed) != 0;
+    let canceled = RENDER_CANCEL.load(Ordering::Relaxed);
     (headers, Json(serde_json::json!({ "canceled": canceled })))
+}
+
+async fn reset_handler(State(_state): State<AppState>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    apply_cors(&mut headers);
+    DECODER.clear().await;
+    RENDER_CANCEL.store(false, Ordering::Relaxed);
+    (headers, StatusCode::OK)
 }
 
 fn apply_cors(headers: &mut HeaderMap) {

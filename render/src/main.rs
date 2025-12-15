@@ -274,6 +274,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await;
 
+    let reset_url = std::env::var("RENDER_RESET_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3000/reset".to_string());
+    let _ = progress_client.post(&reset_url).send().await;
+
     println!("TOTAL : {}[ms]", start.elapsed().as_millis());
 
     Ok(())

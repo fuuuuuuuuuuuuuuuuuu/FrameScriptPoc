@@ -43,6 +43,36 @@ impl Decoder {
 
         decoder
     }
+
+    pub async fn clear(&self) {
+        let map_clone = {
+            let mut map = self.map.lock().unwrap();
+
+            let mut temp = HashMap::new();
+            std::mem::swap(&mut temp, &mut map);
+
+            temp
+        };
+
+        loop {
+            // await decode task
+            let mut finished = true;
+            for decoder in map_clone.values() {
+                if decoder.inner.running_decode_tasks.load(Ordering::Relaxed) > 0 {
+                    finished = false;
+                    break;
+                }
+            }
+
+            if finished {
+                break;
+            }
+
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        ENTIRE_CACHE_SIZE.store(0, Ordering::Relaxed);
+    }
 }
 
 static ENTIRE_CACHE_SIZE: AtomicUsize = AtomicUsize::new(0);
