@@ -19,7 +19,7 @@ export const PROJECT = () => {
             <TimeLine>
                 <ClipSequence>
                     <Clip>
-                        <Video video={TEST_VIDEO} style={{ width: "100%", height: "100%" }} />
+                        <Video video={TEST_VIDEO} trimStart={seconds(1)} trimEnd={seconds(1)} style={{ width: "100%", height: "100%" }} />
                     </Clip>
                     <Clip duration={seconds(3)}>
                         <Text />

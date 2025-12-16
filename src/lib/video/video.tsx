@@ -13,6 +13,8 @@ export type Video = {
 export type VideoProps = {
   video: Video | string
   style?: CSSProperties
+  trimStart?: number // project frames
+  trimEnd?: number   // project frames
 }
 
 export const normalizeVideo = (video: Video | string): Video => {
@@ -91,17 +93,17 @@ export const video_fps = (video: Video | string): number => {
   return 0
 }
 
-export const Video = ({ video, style }: VideoProps) => {
+export const Video = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
   const isRender = useIsRender()
 
   if (isRender) {
-    return <VideoCanvasRender video={video} style={style} />
+    return <VideoCanvasRender video={video} style={style} trimStart={trimStart} trimEnd={trimEnd} />
   } else {
-    return <VideoCanvas video={video} style={style} />
+    return <VideoCanvas video={video} style={style} trimStart={trimStart} trimEnd={trimEnd} />
   }
 }
 
-const VideoCanvas = ({ video, style }: VideoProps) => {
+const VideoCanvas = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const elementRef = useRef<HTMLVideoElement | null>(null);
   const currentFrame = useCurrentFrame()
@@ -109,14 +111,17 @@ const VideoCanvas = ({ video, style }: VideoProps) => {
   const isVisible = useClipActive()
   const playingFlag = useRef(false)
   const pendingSeek = useRef<number | null>(null)
-  const durationFrames = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
+  const trimStartFrames = Math.max(0, Math.floor(trimStart))
+  const trimEndFrames = Math.max(0, Math.floor(trimEnd))
+  const rawDuration = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
+  const durationFrames = Math.max(0, rawDuration - trimStartFrames - trimEndFrames)
   useProvideClipDuration(durationFrames)
 
   useEffect(() => {
     const el = elementRef.current
     if (!el || isPlaying) return
 
-    const time = currentFrame / PROJECT_SETTINGS.fps
+    const time = (currentFrame + trimStartFrames) / PROJECT_SETTINGS.fps
     if (el.readyState >= HTMLMediaElement.HAVE_METADATA) {
       el.currentTime = time
       pendingSeek.current = null
@@ -137,7 +142,7 @@ const VideoCanvas = ({ video, style }: VideoProps) => {
 
   useEffect(() => {
     if (isPlaying) {
-      const time = currentFrame / PROJECT_SETTINGS.fps
+      const time = (currentFrame + trimStartFrames) / PROJECT_SETTINGS.fps
       const element = elementRef.current
       if (element) {
         element.currentTime = time
@@ -169,8 +174,8 @@ const VideoCanvas = ({ video, style }: VideoProps) => {
     let raf: number | null = null
     const tick = () => {
       const time = el.currentTime
-      const frame = Math.round(time * PROJECT_SETTINGS.fps)
-      setGlobalCurrentFrame(frame + clipStart)
+      const frame = Math.round(time * PROJECT_SETTINGS.fps) - trimStartFrames
+      setGlobalCurrentFrame(Math.max(0, frame) + clipStart)
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)

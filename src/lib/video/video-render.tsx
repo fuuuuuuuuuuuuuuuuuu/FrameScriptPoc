@@ -14,7 +14,7 @@ const trackPending = (manual: ManualPromise<void>) => {
   manual.promise.finally(() => pendingFramePromises.delete(manual.promise));
 };
 
-export const VideoCanvasRender = ({ video, style }: VideoProps) => {
+export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const pendingMapRef = useRef<Map<number, { manual: ManualPromise<void>; projectFrame: number }>>(new Map());
@@ -24,7 +24,10 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
   const reconnectTimerRef = useRef<number | null>(null);
   const resolved = useMemo(() => normalizeVideo(video), [video]);
   const fps = useMemo(() => video_fps(resolved), [resolved]);
-  const durationFrames = useMemo(() => video_length(resolved), [resolved]);
+  const trimStartFrames = Math.max(0, Math.floor(trimStart));
+  const trimEndFrames = Math.max(0, Math.floor(trimEnd));
+  const rawDurationFrames = useMemo(() => video_length(resolved), [resolved]);
+  const durationFrames = Math.max(0, rawDurationFrames - trimStartFrames - trimEndFrames);
   useProvideClipDuration(durationFrames);
 
   const currentFrame = useCurrentFrame();
@@ -84,12 +87,8 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
       const clampedFrame =
         maxFrame !== undefined ? Math.min(Math.max(frame, 0), maxFrame) : Math.max(frame, 0);
 
-      const durationSeconds =
-        durationFrames > 0 ? durationFrames / Math.max(1, PROJECT_SETTINGS.fps) : null;
-      const playbackMax =
-        durationSeconds != null && fps > 0
-          ? Math.max(0, Math.floor(durationSeconds * fps))
-          : null;
+      const sourceStart = trimStartFrames;
+      const sourceEnd = Math.max(sourceStart, rawDurationFrames - trimEndFrames - 1);
 
       requestedFrameRef.current = clampedFrame;
       const ws = wsRef.current;
@@ -99,12 +98,9 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
 
       const playbackFrameRaw =
         fps > 0
-          ? Math.round((clampedFrame * fps) / PROJECT_SETTINGS.fps)
-          : Math.round(clampedFrame);
-      const playbackFrame =
-        playbackMax !== null
-          ? Math.min(Math.max(playbackFrameRaw, 0), playbackMax)
-          : Math.max(playbackFrameRaw, 0);
+          ? Math.round(((clampedFrame + sourceStart) * fps) / PROJECT_SETTINGS.fps)
+          : clampedFrame + sourceStart;
+      const playbackFrame = Math.min(Math.max(playbackFrameRaw, sourceStart), sourceEnd);
 
       const alreadyDrawn =
         lastDrawnFrameRef.current != null && lastDrawnFrameRef.current >= clampedFrame;
@@ -131,7 +127,7 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
 
       ws.send(JSON.stringify(req));
     },
-    [durationFrames, fps, resolved.path],
+    [durationFrames, fps, resolved.path, trimEndFrames, trimStartFrames, rawDurationFrames],
   );
 
   useEffect(() => {
@@ -198,7 +194,13 @@ export const VideoCanvasRender = ({ video, style }: VideoProps) => {
         const pending = pendingMapRef.current.get(frameIndex);
         const projectFrame =
           pending?.projectFrame ??
-          Math.round((frameIndex * PROJECT_SETTINGS.fps) / Math.max(1, fps || PROJECT_SETTINGS.fps));
+          Math.max(
+            0,
+            Math.round(
+              ((frameIndex - trimStartFrames) * PROJECT_SETTINGS.fps) /
+                Math.max(1, fps || PROJECT_SETTINGS.fps),
+            ),
+          );
 
         if (pending) {
           pendingMapRef.current.delete(frameIndex);
