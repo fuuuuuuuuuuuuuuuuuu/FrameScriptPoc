@@ -18,11 +18,11 @@ export const PROJECT = () => {
         <Project>
             <TimeLine>
                 <ClipSequence>
+                    <Clip duration={seconds(1)}>
+                        <Text />
+                    </Clip>
                     <Clip>
                         <Video video={TEST_VIDEO} trimStart={seconds(1)} trimEnd={seconds(1)} style={{ width: "100%", height: "100%" }} />
-                    </Clip>
-                    <Clip duration={seconds(3)}>
-                        <Text />
                     </Clip>
                 </ClipSequence>
             </TimeLine>

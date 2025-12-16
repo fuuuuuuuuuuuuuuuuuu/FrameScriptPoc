@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { PROJECT_SETTINGS } from "../../../project/project";
 import { useCurrentFrame } from "../frame";
-import { useProvideClipDuration } from "../clip";
+import { useClipActive, useClipStart, useProvideClipDuration } from "../clip";
 import { createManualPromise, type ManualPromise } from "../../util/promise";
 import { normalizeVideo, video_fps, video_length, type VideoProps } from "./video";
 
@@ -32,6 +32,7 @@ export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: 
 
   const currentFrame = useCurrentFrame();
   const currentFrameRef = useRef(currentFrame);
+  const visible = useClipActive()
 
   useEffect(() => {
     currentFrameRef.current = currentFrame;
@@ -66,18 +67,24 @@ export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: 
     pendingMapRef.current.clear();
   }, []);
 
+  const createOrGetFramePromise = useCallback((target: number) => {
+    const exists = waitersRef.current.get(target)
+    if (exists) {
+      return exists
+    }
+
+    const manual = createManualPromise()
+    trackPending(manual)
+    waitersRef.current.set(target, manual)
+    return manual
+  }, [])
+
   const resolveWaiters = useCallback((projectFrame: number) => {
     const prev = lastDrawnFrameRef.current ?? -Infinity;
     if (projectFrame > prev) {
       lastDrawnFrameRef.current = projectFrame;
     }
-
-    for (const [target, waiter] of Array.from(waitersRef.current.entries())) {
-      if (projectFrame >= target) {
-        waitersRef.current.delete(target);
-        waiter.resolve();
-      }
-    }
+    createOrGetFramePromise(projectFrame).resolve()
   }, []);
 
   const sendFrameRequest = useCallback(
@@ -198,7 +205,7 @@ export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: 
             0,
             Math.round(
               ((frameIndex - trimStartFrames) * PROJECT_SETTINGS.fps) /
-                Math.max(1, fps || PROJECT_SETTINGS.fps),
+              Math.max(1, fps || PROJECT_SETTINGS.fps),
             ),
           );
 
@@ -236,33 +243,33 @@ export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: 
     sendFrameRequest(currentFrame);
   }, [currentFrame, sendFrameRequest]);
 
-  const waitCanvasFrame = useCallback(
-    async (frame?: number) => {
-      const hasDuration = durationFrames > 0;
-      const maxFrame = hasDuration ? Math.max(0, durationFrames - 1) : undefined;
-      const rawTarget = frame ?? currentFrameRef.current ?? 0;
-      const target =
-        maxFrame !== undefined ? Math.min(Math.max(rawTarget, 0), maxFrame) : Math.max(rawTarget, 0);
 
-      const alreadyDrawn = lastDrawnFrameRef.current != null && lastDrawnFrameRef.current >= target;
-      const hasPending = pendingMapRef.current.size > 0;
+  const clipStart = useClipStart()
 
-      if (alreadyDrawn && !hasPending) {
-        return;
+  useEffect(() => {
+    const waitCanvasFrame = async (frame: number) => {
+      if (!visible) {
+        return
       }
 
-      const manual = createManualPromise();
-      trackPending(manual);
-      waitersRef.current.set(target, manual);
-      await manual.promise;
-    },
-    [durationFrames],
-  );
+      if (clipStart) {
+        await createOrGetFramePromise(frame - clipStart).promise
+      } else {
+        await createOrGetFramePromise(frame).promise
+      }
+    }
 
-  (window as any).__frameScript = {
-    ...(window as any).__frameScript,
-    waitCanvasFrame,
-  };
+    (window as any).__frameScript = {
+      ...(window as any).__frameScript,
+      waitCanvasFrame,
+    }
+
+    return () => {
+      if ((window as any).__frameScript) {
+        delete (window as any).__frameScript.waitCanvasFrame
+      }
+    }
+  }, [clipStart, visible])
 
   const baseStyle: CSSProperties = {
     width: "100%",
