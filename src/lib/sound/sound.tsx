@@ -1,7 +1,10 @@
-import { useEffect, useId, useMemo } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef } from "react"
 import { PROJECT_SETTINGS } from "../../../project/project"
-import { useClipRange, useProvideClipDuration } from "../clip"
+import { useGlobalCurrentFrame } from "../frame"
+import { useClipActive, useClipRange, useProvideClipDuration } from "../clip"
 import { registerAudioSegmentGlobal, unregisterAudioSegmentGlobal } from "../audio-plan"
+import { fetchAudioBuffer } from "../audio"
+import { useIsPlaying, useIsRender } from "../../StudioApp"
 
 export type Sound = {
   path: string
@@ -63,6 +66,10 @@ export const sound_length = (sound: Sound | string): number => {
 export const Sound = ({ sound, trimStart = 0, trimEnd = 0 }: SoundProps) => {
   const id = useId()
   const clipRange = useClipRange()
+  const isActive = useClipActive()
+  const isPlaying = useIsPlaying()
+  const isRender = useIsRender()
+  const globalFrame = useGlobalCurrentFrame()
   const resolvedSound = useMemo(() => normalizeSound(sound), [sound])
   const rawDurationFrames = useMemo(
     () => sound_length(resolvedSound),
@@ -76,6 +83,110 @@ export const Sound = ({ sound, trimStart = 0, trimEnd = 0 }: SoundProps) => {
   )
 
   useProvideClipDuration(durationFrames)
+
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const gainRef = useRef<GainNode | null>(null)
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const playingPathRef = useRef<string | null>(null)
+  const prevFrameRef = useRef<number | null>(null)
+
+  const stopPlayback = useCallback(() => {
+    const src = sourceRef.current
+    sourceRef.current = null
+    playingPathRef.current = null
+    if (src) {
+      try {
+        src.onended = null
+        src.stop()
+      } catch {
+        // ignore
+      }
+      try {
+        src.disconnect()
+      } catch {
+        // ignore
+      }
+    }
+  }, [])
+
+  const ensureAudioContext = useCallback(async () => {
+    if (audioCtxRef.current) return audioCtxRef.current
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext
+    const ctx = new Ctx()
+    audioCtxRef.current = ctx
+    const gain = ctx.createGain()
+    gain.gain.value = 1
+    gain.connect(ctx.destination)
+    gainRef.current = gain
+    try {
+      await ctx.resume()
+    } catch {
+      // may require user gesture; retry on play
+    }
+    return ctx
+  }, [])
+
+  const startPlaybackAt = useCallback(
+    async (projectFrame: number) => {
+      if (!clipRange) return
+      const fps = PROJECT_SETTINGS.fps
+      if (fps <= 0) return
+
+      const clipStartFrame = clipRange.start
+      const clipEndFrame = clipRange.end
+      const clipDurationFrames = Math.max(0, clipEndFrame - clipStartFrame + 1)
+      if (clipDurationFrames <= 0) return
+
+      const relativeFrame = Math.max(0, projectFrame - clipStartFrame)
+      if (relativeFrame >= clipDurationFrames) return
+
+      const remainingClipFrames = Math.max(0, clipEndFrame - projectFrame + 1)
+      const availableFromOffsetFrames = Math.max(0, durationFrames - relativeFrame)
+      const playFrames = Math.min(remainingClipFrames, availableFromOffsetFrames)
+      if (playFrames <= 0) return
+
+      const ctx = await ensureAudioContext()
+      try {
+        await ctx.resume()
+      } catch {
+        // ignore
+      }
+
+      const buffer = await fetchAudioBuffer(resolvedSound.path, ctx)
+
+      const offsetSec = (trimStartFrames + relativeFrame) / fps
+      const durSec = playFrames / fps
+      const clampedOffset = Math.min(Math.max(0, offsetSec), Math.max(0, buffer.duration))
+      const maxDur = Math.max(0, buffer.duration - clampedOffset)
+      const clampedDur = Math.min(durSec, maxDur)
+      if (clampedDur <= 0) return
+
+      stopPlayback()
+
+      const source = ctx.createBufferSource()
+      source.buffer = buffer
+      source.connect(gainRef.current ?? ctx.destination)
+      sourceRef.current = source
+      playingPathRef.current = resolvedSound.path
+
+      source.onended = () => {
+        if (sourceRef.current === source) {
+          sourceRef.current = null
+          playingPathRef.current = null
+        }
+      }
+
+      source.start(0, clampedOffset, clampedDur)
+    },
+    [
+      clipRange,
+      durationFrames,
+      ensureAudioContext,
+      resolvedSound.path,
+      stopPlayback,
+      trimStartFrames,
+    ],
+  )
 
   useEffect(() => {
     if (!clipRange) return
@@ -98,6 +209,44 @@ export const Sound = ({ sound, trimStart = 0, trimEnd = 0 }: SoundProps) => {
       unregisterAudioSegmentGlobal(id)
     }
   }, [clipRange, durationFrames, id, resolvedSound.path, trimStartFrames])
+
+  useEffect(() => {
+    if (isRender) return
+
+    const prev = prevFrameRef.current
+    prevFrameRef.current = globalFrame
+
+    const shouldPlay = Boolean(clipRange) && isPlaying && isActive
+    if (!shouldPlay) {
+      stopPlayback()
+      return
+    }
+
+    const wasPlayingSame =
+      sourceRef.current != null && playingPathRef.current === resolvedSound.path
+    const isSeek =
+      prev != null &&
+      (globalFrame < prev || globalFrame - prev > PROJECT_SETTINGS.fps * 2)
+
+    if (!wasPlayingSame || isSeek) {
+      void startPlaybackAt(globalFrame)
+    }
+  }, [
+    clipRange,
+    globalFrame,
+    isActive,
+    isPlaying,
+    isRender,
+    resolvedSound.path,
+    startPlaybackAt,
+    stopPlayback,
+  ])
+
+  useEffect(() => {
+    return () => {
+      stopPlayback()
+    }
+  }, [stopPlayback])
 
   return null
 }
