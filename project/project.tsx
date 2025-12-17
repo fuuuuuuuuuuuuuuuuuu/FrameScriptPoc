@@ -23,8 +23,7 @@ export const PROJECT = () => {
                     <Clip>
                         <Video
                             video={"~/Videos/music.mp4"}
-                            trimStart={seconds(1)}
-                            trimEnd={seconds(1)}
+                            trim={{ from: seconds(1), duration: seconds(5) }}
                             style={{ width: "100%", height: "100%" }}
                         />
                     </Clip>
@@ -33,8 +32,7 @@ export const PROJECT = () => {
                     <Clip>
                         <Sound
                             sound={"~/Videos/music.mp3"}
-                            trimStart={seconds(1)}
-                            trimEnd={seconds(1)}
+                            trim={{ trimStart: seconds(1), trimEnd: seconds(1) }}
                         />
                     </Clip>
                 </ClipSequence>

@@ -6,6 +6,8 @@ import { useIsPlaying, useIsRender } from "../../StudioApp";
 import { useClipActive, useClipRange, useClipStart, useProvideClipDuration } from "../clip";
 import { registerAudioSegmentGlobal, unregisterAudioSegmentGlobal } from "../audio-plan";
 import { VideoCanvasRender } from "./video-render";
+import type { Trim } from "../trim";
+import { resolveTrimFrames } from "../trim";
 
 export type Video = {
   path: string
@@ -14,8 +16,7 @@ export type Video = {
 export type VideoProps = {
   video: Video | string
   style?: CSSProperties
-  trimStart?: number // project frames
-  trimEnd?: number   // project frames
+  trim?: Trim
 }
 
 export const normalizeVideo = (video: Video | string): Video => {
@@ -94,14 +95,25 @@ export const video_fps = (video: Video | string): number => {
   return 0
 }
 
-export const Video = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
+export type VideoResolvedTrimProps = {
+  trimStartFrames: number
+  trimEndFrames: number
+}
+
+export const Video = ({ video, style, trim }: VideoProps) => {
   const isRender = useIsRender()
   const id = useId()
   const clipRange = useClipRange()
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const rawDurationFrames = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
-  const trimStartFrames = Math.max(0, Math.floor(trimStart))
-  const trimEndFrames = Math.max(0, Math.floor(trimEnd))
+  const { trimStartFrames, trimEndFrames } = useMemo(
+    () =>
+      resolveTrimFrames({
+        rawDurationFrames,
+        trim,
+      }),
+    [rawDurationFrames, trim],
+  )
 
   useEffect(() => {
     if (!clipRange) return
@@ -126,13 +138,29 @@ export const Video = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) 
   }, [clipRange, id, rawDurationFrames, resolvedVideo.path, trimEndFrames, trimStartFrames])
 
   if (isRender) {
-    return <VideoCanvasRender video={video} style={style} trimStart={trimStart} trimEnd={trimEnd} />
+    return (
+      <VideoCanvasRender
+        video={video}
+        style={style}
+        trimStartFrames={trimStartFrames}
+        trimEndFrames={trimEndFrames}
+      />
+    )
   } else {
-    return <VideoCanvas video={video} style={style} trimStart={trimStart} trimEnd={trimEnd} />
+    return (
+      <VideoCanvas
+        video={video}
+        style={style}
+        trimStartFrames={trimStartFrames}
+        trimEndFrames={trimEndFrames}
+      />
+    )
   }
 }
 
-const VideoCanvas = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
+type VideoCanvasProps = Omit<VideoProps, "trim"> & VideoResolvedTrimProps
+
+const VideoCanvas = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: VideoCanvasProps) => {
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const elementRef = useRef<HTMLVideoElement | null>(null);
   const currentFrame = useCurrentFrame()
@@ -140,8 +168,6 @@ const VideoCanvas = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) =
   const isVisible = useClipActive()
   const playingFlag = useRef(false)
   const pendingSeek = useRef<number | null>(null)
-  const trimStartFrames = Math.max(0, Math.floor(trimStart))
-  const trimEndFrames = Math.max(0, Math.floor(trimEnd))
   const rawDuration = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
   const durationFrames = Math.max(0, rawDuration - trimStartFrames - trimEndFrames)
   useProvideClipDuration(durationFrames)

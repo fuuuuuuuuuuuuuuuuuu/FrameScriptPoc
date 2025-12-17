@@ -4,7 +4,7 @@ import { PROJECT_SETTINGS } from "../../../project/project";
 import { useCurrentFrame } from "../frame";
 import { useClipActive, useClipStart, useProvideClipDuration } from "../clip";
 import { createManualPromise, type ManualPromise } from "../../util/promise";
-import { normalizeVideo, video_fps, video_length, type VideoProps } from "./video";
+import { normalizeVideo, video_fps, video_length, type Video, type VideoResolvedTrimProps } from "./video";
 
 // Track pending frame draws so headless callers can await completion.
 const pendingFramePromises = new Set<Promise<void>>();
@@ -14,7 +14,12 @@ const trackPending = (manual: ManualPromise<void>) => {
   manual.promise.finally(() => pendingFramePromises.delete(manual.promise));
 };
 
-export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
+export type VideoCanvasRenderProps = {
+  video: Video | string
+  style?: CSSProperties
+} & VideoResolvedTrimProps
+
+export const VideoCanvasRender = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: VideoCanvasRenderProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const pendingMapRef = useRef<Map<number, { manual: ManualPromise<void>; projectFrame: number }>>(new Map());
@@ -24,8 +29,6 @@ export const VideoCanvasRender = ({ video, style, trimStart = 0, trimEnd = 0 }: 
   const reconnectTimerRef = useRef<number | null>(null);
   const resolved = useMemo(() => normalizeVideo(video), [video]);
   const fps = useMemo(() => video_fps(resolved), [resolved]);
-  const trimStartFrames = Math.max(0, Math.floor(trimStart));
-  const trimEndFrames = Math.max(0, Math.floor(trimEnd));
   const rawDurationFrames = useMemo(() => video_length(resolved), [resolved]);
   const durationFrames = Math.max(0, rawDurationFrames - trimStartFrames - trimEndFrames);
   useProvideClipDuration(durationFrames);

@@ -5,6 +5,8 @@ import { useClipActive, useClipRange, useProvideClipDuration } from "../clip"
 import { registerAudioSegmentGlobal, unregisterAudioSegmentGlobal } from "../audio-plan"
 import { fetchAudioBuffer } from "../audio"
 import { useIsPlaying, useIsRender } from "../../StudioApp"
+import type { Trim } from "../trim"
+import { resolveTrimFrames } from "../trim"
 
 export type Sound = {
   path: string
@@ -12,8 +14,7 @@ export type Sound = {
 
 export type SoundProps = {
   sound: Sound | string
-  trimStart?: number // project frames
-  trimEnd?: number // project frames
+  trim?: Trim
 }
 
 export const normalizeSound = (sound: Sound | string): Sound => {
@@ -63,7 +64,7 @@ export const sound_length = (sound: Sound | string): number => {
   return 0
 }
 
-export const Sound = ({ sound, trimStart = 0, trimEnd = 0 }: SoundProps) => {
+export const Sound = ({ sound, trim }: SoundProps) => {
   const id = useId()
   const clipRange = useClipRange()
   const isActive = useClipActive()
@@ -75,8 +76,14 @@ export const Sound = ({ sound, trimStart = 0, trimEnd = 0 }: SoundProps) => {
     () => sound_length(resolvedSound),
     [resolvedSound],
   )
-  const trimStartFrames = Math.max(0, Math.floor(trimStart))
-  const trimEndFrames = Math.max(0, Math.floor(trimEnd))
+  const { trimStartFrames, trimEndFrames } = useMemo(
+    () =>
+      resolveTrimFrames({
+        rawDurationFrames,
+        trim,
+      }),
+    [rawDurationFrames, trim],
+  )
   const durationFrames = Math.max(
     0,
     rawDurationFrames - trimStartFrames - trimEndFrames,
