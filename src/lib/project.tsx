@@ -11,7 +11,17 @@ type ProjectProps = {
   children: React.ReactNode
 }
 
-// Thin wrapper kept for API compatibility; settings are read directly from PROJECT_SETTINGS.
 export const Project = ({ children }: ProjectProps) => {
-  return <>{children}</>
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </div>
+  )
 }

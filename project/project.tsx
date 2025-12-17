@@ -1,5 +1,6 @@
 import { Clip, ClipSequence } from "../src/lib/clip"
 import { seconds, useCurrentFrame } from "../src/lib/frame"
+import { FillFrame } from "../src/lib/layout/fill-frame"
 import { Project, type ProjectSettings } from "../src/lib/project"
 import { Sound } from "../src/lib/sound/sound"
 import { TimeLine } from "../src/lib/timeline"
@@ -21,11 +22,16 @@ export const PROJECT = () => {
                         <Text />
                     </Clip>
                     <Clip>
-                        <Video
-                            video={"~/Videos/music.mp4"}
-                            trim={{ from: seconds(1), duration: seconds(5) }}
-                            style={{ width: "100%", height: "100%" }}
-                        />
+                        <FillFrame>
+                            <Video
+                                video={"~/Videos/music.mp4"}
+                                trim={{ from: seconds(1), duration: seconds(5) }}
+                                style={{ width: "100%", height: "100%" }}
+                            />
+                        </FillFrame>
+                        <FillFrame>
+                            <Text />
+                        </FillFrame>
                     </Clip>
                 </ClipSequence>
                 <ClipSequence>

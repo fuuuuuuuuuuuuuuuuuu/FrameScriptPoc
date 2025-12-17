@@ -31,6 +31,7 @@ export const StudioApp = () => {
   const previewMinHeight = previewMinWidth * previewAspectValue;
   const timelineMinHeight = 200;
   const [previewSize, setPreviewSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const hasPreviewSize = previewSize.width > 0 && previewSize.height > 0;
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -190,8 +191,10 @@ export const StudioApp = () => {
                 >
                   <div
                     style={{
-                      width: previewSize.width || "100%",
-                      height: previewSize.height || "100%",
+                      width: hasPreviewSize ? previewSize.width : "100%",
+                      height: hasPreviewSize ? previewSize.height : "auto",
+                      maxWidth: "100%",
+                      maxHeight: "100%",
                       aspectRatio: previewAspect,
                       border: "1px solid #444",
                       borderRadius: 1,
