@@ -1,6 +1,7 @@
 import { Clip, ClipSequence } from "../src/lib/clip"
 import { seconds, useCurrentFrame } from "../src/lib/frame"
 import { Project, type ProjectSettings } from "../src/lib/project"
+import { Sound } from "../src/lib/sound/sound"
 import { TimeLine } from "../src/lib/timeline"
 import { Video } from "../src/lib/video/video"
 
@@ -11,8 +12,6 @@ export const PROJECT_SETTINGS: ProjectSettings = {
     fps: 60,
 }
 
-const TEST_VIDEO = { path: "~/Videos/music.mp4" }
-
 export const PROJECT = () => {
     return (
         <Project>
@@ -22,7 +21,21 @@ export const PROJECT = () => {
                         <Text />
                     </Clip>
                     <Clip>
-                        <Video video={TEST_VIDEO} trimStart={seconds(1)} trimEnd={seconds(1)} style={{ width: "100%", height: "100%" }} />
+                        <Video
+                            video={"~/Videos/music.mp4"}
+                            trimStart={seconds(1)}
+                            trimEnd={seconds(1)}
+                            style={{ width: "100%", height: "100%" }}
+                        />
+                    </Clip>
+                </ClipSequence>
+                <ClipSequence>
+                    <Clip>
+                        <Sound
+                            sound={"~/Videos/music.mp3"}
+                            trimStart={seconds(1)}
+                            trimEnd={seconds(1)}
+                        />
                     </Clip>
                 </ClipSequence>
             </TimeLine>

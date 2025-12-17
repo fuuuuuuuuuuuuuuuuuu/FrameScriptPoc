@@ -239,7 +239,16 @@ pub async fn mux_audio_plan_into_mp4(
 
     let fmt_f = |value: f64| format!("{:.6}", value.max(0.0));
 
-    for (n, seg) in plan.segments.iter().enumerate() {
+    // Base silent bed so output audio always starts at 0 and has deterministic duration.
+    filter_parts.push(format!(
+        "anullsrc=r=48000:cl=stereo:d={}[base]",
+        fmt_f(duration_sec)
+    ));
+
+    let mut segment_labels: Vec<String> = Vec::new();
+
+    for seg in plan.segments.iter() {
+        let n = segment_labels.len();
         let src_path = match &seg.source {
             AudioSourceResolved::Video { path } => path,
             AudioSourceResolved::Sound { path } => path,
@@ -268,22 +277,23 @@ pub async fn mux_audio_plan_into_mp4(
             fmt_f(start_sec),
             fmt_f(dur_sec),
         ));
+
+        segment_labels.push(format!("[a{n}]"));
     }
 
-    let segment_count = filter_parts.len();
-    if segment_count == 0 {
+    if segment_labels.is_empty() {
         return Ok(());
     }
 
-    let mix_inputs: String = (0..segment_count).map(|n| format!("[a{n}]")).collect();
+    let seg_count = segment_labels.len();
+    let mix_inputs = std::iter::once("[base]".to_string())
+        .chain(segment_labels.iter().cloned())
+        .collect::<String>();
 
-    if segment_count == 1 {
-        filter_parts.push(format!("{mix_inputs}anull, aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"));
-    } else {
-        filter_parts.push(format!(
-            "{mix_inputs}amix=inputs={segment_count}:normalize=0, aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"
-        ));
-    }
+    let total_inputs = 1 + seg_count;
+    filter_parts.push(format!(
+        "{mix_inputs}amix=inputs={total_inputs}:duration=first:normalize=0,aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"
+    ));
 
     let filter_complex = filter_parts.join(";");
 
@@ -299,8 +309,9 @@ pub async fn mux_audio_plan_into_mp4(
         .arg("aac")
         .arg("-b:a")
         .arg("192k")
-        .arg("-t")
-        .arg(fmt_f(duration_sec))
+        .arg("-shortest")
+        .arg("-avoid_negative_ts")
+        .arg("make_zero")
         .arg("-movflags")
         .arg("+faststart")
         .arg(output_video)

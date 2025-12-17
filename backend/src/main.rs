@@ -28,7 +28,7 @@ use tracing::{error, info};
 
 use crate::{
     decoder::{DECODER, DecoderKey, set_max_cache_size},
-    ffmpeg::{probe_video_duration_ms, probe_video_fps},
+    ffmpeg::{probe_audio_duration_ms, probe_video_duration_ms, probe_video_fps},
     util::resolve_path_to_string,
 };
 
@@ -144,6 +144,10 @@ async fn main() {
             get(video_meta_handler).options(options_handler),
         )
         .route("/audio", get(audio_handler).options(options_handler))
+        .route(
+            "/audio/meta",
+            get(audio_meta_handler).options(options_handler),
+        )
         .route(
             "/set_cache_size",
             post(set_cache_size_handler).options(options_handler),
@@ -383,6 +387,24 @@ async fn video_meta_handler(
     Ok(resp)
 }
 
+#[derive(Serialize)]
+struct AudioMetadataResponse {
+    duration_ms: u64,
+}
+
+async fn audio_meta_handler(
+    State(_state): State<AppState>,
+    Query(AudioQuery { path }): Query<AudioQuery>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let resolved_path = resolve_path_to_string(&path).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let duration_ms =
+        probe_audio_duration_ms(&resolved_path).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let mut resp = Json(AudioMetadataResponse { duration_ms }).into_response();
+    apply_cors(resp.headers_mut());
+    Ok(resp)
+}
+
 async fn handle_socket(mut socket: WebSocket, _state: AppState) {
     info!("client connected");
 
@@ -559,6 +581,23 @@ async fn set_audio_plan_handler(
         let Some(source) = resolved_source else {
             continue;
         };
+
+        // Validate that the source actually has an audio stream, and clamp the segment to its duration.
+        let source_path = match &source {
+            AudioSourceResolved::Video { path } => path.as_str(),
+            AudioSourceResolved::Sound { path } => path.as_str(),
+        };
+        let source_duration_ms = match probe_audio_duration_ms(source_path) {
+            Ok(ms) if ms > 0 => ms,
+            _ => continue,
+        };
+        let source_total_frames =
+            ((source_duration_ms as f64 / 1000.0) * fps).round().max(0.0) as i64;
+        let available = (source_total_frames - source_start_frame).max(0);
+        let duration_frames = duration_frames.min(available);
+        if duration_frames == 0 {
+            continue;
+        }
 
         segments.push(AudioSegmentResolved {
             id: seg.id,
