@@ -1,4 +1,4 @@
-import { Children, cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState } from "react"
+import { Children, cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useGlobalCurrentFrame } from "./frame"
 import { useClipVisibility, useTimelineRegistration } from "./timeline"
 import { registerClipGlobal, unregisterClipGlobal } from "./timeline"
@@ -77,6 +77,16 @@ export const ClipStatic = ({ start, end, label, children, laneId }: ClipStaticPr
 export const useClipStart = () => {
   const ctx = useContext(ClipContext)
   return ctx?.baseStart ?? null
+}
+
+export const useClipRange = () => {
+  const ctx = useContext(ClipContext)
+  const start = ctx?.baseStart ?? null
+  const end = ctx?.baseEnd ?? null
+  return useMemo(() => {
+    if (start === null || end === null) return null
+    return { start, end }
+  }, [start, end])
 }
 
 export const useClipDepth = () => {

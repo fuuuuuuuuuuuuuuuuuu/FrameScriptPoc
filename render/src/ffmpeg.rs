@@ -1,9 +1,11 @@
 use std::{
     error::Error,
+    collections::BTreeMap,
     path::{Path, PathBuf},
     process::Stdio,
 };
 
+use serde::Deserialize;
 use tokio::{
     fs,
     io::AsyncWriteExt,
@@ -160,6 +162,155 @@ pub async fn concat_segments_mp4(
 
     if !status.success() {
         return Err(format!("ffmpeg concat failed: {}", status).into());
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum AudioSourceResolved {
+    Video { path: String },
+    Sound { path: String },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AudioSegmentResolved {
+    pub id: String,
+    pub source: AudioSourceResolved,
+    #[serde(rename = "projectStartFrame")]
+    pub project_start_frame: i64,
+    #[serde(rename = "sourceStartFrame")]
+    pub source_start_frame: i64,
+    #[serde(rename = "durationFrames")]
+    pub duration_frames: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AudioPlanResolved {
+    pub fps: f64,
+    pub segments: Vec<AudioSegmentResolved>,
+}
+
+pub async fn mux_audio_plan_into_mp4(
+    input_video: &Path,
+    output_video: &Path,
+    plan: &AudioPlanResolved,
+    total_frames: usize,
+    fps: f64,
+) -> Result<(), Box<dyn Error>> {
+    if plan.segments.is_empty() {
+        // nothing to mux
+        return Ok(());
+    }
+
+    let fps = if fps.is_finite() && fps > 0.0 { fps } else { plan.fps };
+    let fps = if fps.is_finite() && fps > 0.0 { fps } else { 60.0 };
+    let duration_sec = (total_frames as f64) / fps;
+
+    let mut sources: BTreeMap<String, usize> = BTreeMap::new();
+    let mut next_input_index: usize = 1; // input #0 is video
+    for seg in &plan.segments {
+        let path = match &seg.source {
+            AudioSourceResolved::Video { path } => path,
+            AudioSourceResolved::Sound { path } => path,
+        };
+        if !sources.contains_key(path) {
+            sources.insert(path.clone(), next_input_index);
+            next_input_index += 1;
+        }
+    }
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.arg("-y")
+        .arg("-hide_banner")
+        .arg("-loglevel")
+        .arg("error")
+        .arg("-i")
+        .arg(input_video);
+
+    let mut ordered_sources: Vec<(String, usize)> = sources.into_iter().collect();
+    ordered_sources.sort_by_key(|(_, idx)| *idx);
+    for (path, _) in &ordered_sources {
+        cmd.arg("-i").arg(path);
+    }
+
+    let mut filter_parts: Vec<String> = Vec::new();
+
+    let fmt_f = |value: f64| format!("{:.6}", value.max(0.0));
+
+    for (n, seg) in plan.segments.iter().enumerate() {
+        let src_path = match &seg.source {
+            AudioSourceResolved::Video { path } => path,
+            AudioSourceResolved::Sound { path } => path,
+        };
+        let Some(&input_idx) = ordered_sources
+            .iter()
+            .find(|(p, _)| p == src_path)
+            .map(|(_, idx)| idx)
+        else {
+            continue;
+        };
+
+        let project_start_frame = seg.project_start_frame.max(0) as f64;
+        let source_start_frame = seg.source_start_frame.max(0) as f64;
+        let duration_frames = seg.duration_frames.max(0) as f64;
+        if duration_frames <= 0.0 {
+            continue;
+        }
+
+        let start_sec = source_start_frame / fps;
+        let dur_sec = duration_frames / fps;
+        let delay_ms = ((project_start_frame / fps) * 1000.0).round().max(0.0) as i64;
+
+        filter_parts.push(format!(
+            "[{input_idx}:a]atrim=start={}:duration={},asetpts=PTS-STARTPTS,aresample=48000,adelay={delay_ms}:all=1[a{n}]",
+            fmt_f(start_sec),
+            fmt_f(dur_sec),
+        ));
+    }
+
+    let segment_count = filter_parts.len();
+    if segment_count == 0 {
+        return Ok(());
+    }
+
+    let mix_inputs: String = (0..segment_count).map(|n| format!("[a{n}]")).collect();
+
+    if segment_count == 1 {
+        filter_parts.push(format!("{mix_inputs}anull, aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"));
+    } else {
+        filter_parts.push(format!(
+            "{mix_inputs}amix=inputs={segment_count}:normalize=0, aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]"
+        ));
+    }
+
+    let filter_complex = filter_parts.join(";");
+
+    cmd.arg("-filter_complex")
+        .arg(filter_complex)
+        .arg("-map")
+        .arg("0:v:0")
+        .arg("-map")
+        .arg("[aout]")
+        .arg("-c:v")
+        .arg("copy")
+        .arg("-c:a")
+        .arg("aac")
+        .arg("-b:a")
+        .arg("192k")
+        .arg("-t")
+        .arg(fmt_f(duration_sec))
+        .arg("-movflags")
+        .arg("+faststart")
+        .arg(output_video)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::inherit());
+
+    let status = cmd.status().await?;
+    if !status.success() {
+        return Err(format!("ffmpeg audio mux failed: {}", status).into());
     }
 
     Ok(())

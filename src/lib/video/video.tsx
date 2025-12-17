@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 import { useCurrentFrame, useSetGlobalCurrentFrame } from "../frame";
 import { PROJECT_SETTINGS } from "../../../project/project";
 import { useIsPlaying, useIsRender } from "../../StudioApp";
-import { useClipActive, useClipStart, useProvideClipDuration } from "../clip";
+import { useClipActive, useClipRange, useClipStart, useProvideClipDuration } from "../clip";
+import { registerAudioSegmentGlobal, unregisterAudioSegmentGlobal } from "../audio-plan";
 import { VideoCanvasRender } from "./video-render";
 
 export type Video = {
@@ -95,6 +96,34 @@ export const video_fps = (video: Video | string): number => {
 
 export const Video = ({ video, style, trimStart = 0, trimEnd = 0 }: VideoProps) => {
   const isRender = useIsRender()
+  const id = useId()
+  const clipRange = useClipRange()
+  const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
+  const rawDurationFrames = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
+  const trimStartFrames = Math.max(0, Math.floor(trimStart))
+  const trimEndFrames = Math.max(0, Math.floor(trimEnd))
+
+  useEffect(() => {
+    if (!clipRange) return
+
+    const projectStartFrame = clipRange.start
+    const clipDurationFrames = Math.max(0, clipRange.end - clipRange.start + 1)
+    const availableFrames = Math.max(0, rawDurationFrames - trimStartFrames - trimEndFrames)
+    const durationFrames = Math.min(clipDurationFrames, availableFrames)
+    if (durationFrames <= 0) return
+
+    registerAudioSegmentGlobal({
+      id,
+      source: { kind: "video", path: resolvedVideo.path },
+      projectStartFrame,
+      sourceStartFrame: trimStartFrames,
+      durationFrames,
+    })
+
+    return () => {
+      unregisterAudioSegmentGlobal(id)
+    }
+  }, [clipRange, id, rawDurationFrames, resolvedVideo.path, trimEndFrames, trimStartFrames])
 
   if (isRender) {
     return <VideoCanvasRender video={video} style={style} trimStart={trimStart} trimEnd={trimEnd} />

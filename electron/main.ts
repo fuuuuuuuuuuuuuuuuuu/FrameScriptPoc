@@ -276,6 +276,10 @@ function createRenderSettingsWindow() {
   renderSettingsWindow.setMenu(null);
   renderSettingsWindow.setMenuBarVisibility(false);
 
+  renderSettingsWindow.webContents.once("did-finish-load", () => {
+    renderSettingsWindow?.webContents.openDevTools({ mode: "detach" });
+  });
+
   const target = resolveRenderSettingsUrl();
   if (typeof target === "string") {
     void renderSettingsWindow.loadURL(target);
@@ -312,6 +316,10 @@ function createRenderProgressWindow() {
   });
   renderProgressWindow.setMenu(null);
   renderProgressWindow.setMenuBarVisibility(false);
+
+  renderProgressWindow.webContents.once("did-finish-load", () => {
+    renderProgressWindow?.webContents.openDevTools({ mode: "detach" });
+  });
 
   const target = resolveRenderProgressUrl();
   if (typeof target === "string") {

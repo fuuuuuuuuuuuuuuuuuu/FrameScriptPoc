@@ -5,6 +5,7 @@ import { StudioStateContext } from "../StudioApp";
 import { WithCurrentFrame } from "../lib/frame";
 import { useTimelineClips } from "../lib/timeline";
 import { Store } from "../util/state";
+import { useAudioSegments } from "../lib/audio-plan";
 
 const presets = ["medium", "slow", "fast"];
 const encodeOptions = [
@@ -54,6 +55,7 @@ export const RenderSettingsPage = () => {
   const [platformLabel, setPlatformLabel] = useState("(detecting)");
   const [platformBinPath, setPlatformBinPath] = useState<string | null>(null);
   const [isDevMode, setIsDevMode] = useState(false);
+  const audioSegments = useAudioSegments();
 
   const commandPreview = useMemo(() => {
     return `${width}:${height}:${fps}:${frames}:${workers}:${encode}:${preset}`;
@@ -110,6 +112,18 @@ export const RenderSettingsPage = () => {
     setBusy(true);
     setStatus(null);
     try {
+      try {
+        await fetch("http://127.0.0.1:3000/render_audio_plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fps: Number(fps),
+            segments: audioSegments,
+          }),
+        });
+      } catch (_error) {
+        // ignore; still try to start render
+      }
       try {
         await fetch("http://127.0.0.1:3000/set_cache_size", {
           method: "POST",

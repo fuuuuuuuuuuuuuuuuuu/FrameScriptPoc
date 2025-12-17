@@ -70,6 +70,59 @@ struct ProgressResponse {
     total: usize,
 }
 
+#[derive(Deserialize, Clone)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum AudioSourceRef {
+    Video { path: String },
+    Sound { path: String },
+}
+
+#[derive(Deserialize, Clone)]
+struct AudioSegment {
+    id: String,
+    source: AudioSourceRef,
+    #[serde(rename = "projectStartFrame")]
+    project_start_frame: i64,
+    #[serde(rename = "sourceStartFrame")]
+    source_start_frame: i64,
+    #[serde(rename = "durationFrames")]
+    duration_frames: i64,
+}
+
+#[derive(Deserialize, Clone)]
+struct AudioPlanRequest {
+    fps: f64,
+    segments: Vec<AudioSegment>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum AudioSourceResolved {
+    Video { path: String },
+    Sound { path: String },
+}
+
+#[derive(Serialize, Clone)]
+struct AudioSegmentResolved {
+    id: String,
+    source: AudioSourceResolved,
+    #[serde(rename = "projectStartFrame")]
+    project_start_frame: i64,
+    #[serde(rename = "sourceStartFrame")]
+    source_start_frame: i64,
+    #[serde(rename = "durationFrames")]
+    duration_frames: i64,
+}
+
+#[derive(Serialize, Clone)]
+struct AudioPlanResolved {
+    fps: f64,
+    segments: Vec<AudioSegmentResolved>,
+}
+
+static RENDER_AUDIO_PLAN: std::sync::LazyLock<std::sync::Mutex<Option<AudioPlanResolved>>> =
+    std::sync::LazyLock::new(|| std::sync::Mutex::new(None));
+
 static RENDER_COMPLETED: AtomicUsize = AtomicUsize::new(0);
 static RENDER_TOTAL: AtomicUsize = AtomicUsize::new(0);
 static RENDER_CANCEL: AtomicBool = AtomicBool::new(false);
@@ -104,6 +157,12 @@ async fn main() {
         .route(
             "/render_cancel",
             post(render_cancel_handler).options(options_handler),
+        )
+        .route(
+            "/render_audio_plan",
+            post(set_audio_plan_handler)
+                .get(get_audio_plan_handler)
+                .options(options_handler),
         )
         .route("/reset", post(reset_handler).options(options_handler))
         .route(
@@ -461,7 +520,70 @@ async fn reset_handler(State(_state): State<AppState>) -> impl IntoResponse {
     apply_cors(&mut headers);
     DECODER.clear().await;
     RENDER_CANCEL.store(false, Ordering::Relaxed);
+    *RENDER_AUDIO_PLAN.lock().unwrap() = None;
     (headers, StatusCode::OK)
+}
+
+async fn set_audio_plan_handler(
+    State(_state): State<AppState>,
+    Json(payload): Json<AudioPlanRequest>,
+) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    apply_cors(&mut headers);
+
+    let fps = if payload.fps.is_finite() && payload.fps > 0.0 {
+        payload.fps
+    } else {
+        60.0
+    };
+
+    let mut segments = Vec::new();
+    for seg in payload.segments.into_iter() {
+        let duration_frames = seg.duration_frames.max(0);
+        if duration_frames == 0 {
+            continue;
+        }
+
+        let project_start_frame = seg.project_start_frame.max(0);
+        let source_start_frame = seg.source_start_frame.max(0);
+
+        let resolved_source = match seg.source {
+            AudioSourceRef::Video { path } => resolve_path_to_string(&path)
+                .ok()
+                .map(|p| AudioSourceResolved::Video { path: p }),
+            AudioSourceRef::Sound { path } => resolve_path_to_string(&path)
+                .ok()
+                .map(|p| AudioSourceResolved::Sound { path: p }),
+        };
+
+        let Some(source) = resolved_source else {
+            continue;
+        };
+
+        segments.push(AudioSegmentResolved {
+            id: seg.id,
+            source,
+            project_start_frame,
+            source_start_frame,
+            duration_frames,
+        });
+    }
+
+    *RENDER_AUDIO_PLAN.lock().unwrap() = Some(AudioPlanResolved { fps, segments });
+
+    (headers, StatusCode::OK)
+}
+
+async fn get_audio_plan_handler(State(_state): State<AppState>) -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    apply_cors(&mut headers);
+
+    let plan = RENDER_AUDIO_PLAN.lock().unwrap().clone().unwrap_or(AudioPlanResolved {
+        fps: 60.0,
+        segments: Vec::new(),
+    });
+
+    (headers, Json(plan))
 }
 
 fn apply_cors(headers: &mut HeaderMap) {

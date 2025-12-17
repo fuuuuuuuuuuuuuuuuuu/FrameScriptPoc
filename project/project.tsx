@@ -11,7 +11,7 @@ export const PROJECT_SETTINGS: ProjectSettings = {
     fps: 60,
 }
 
-const TEST_VIDEO = { path: "~/Videos/1080p.mp4" }
+const TEST_VIDEO = { path: "~/Videos/music.mp4" }
 
 export const PROJECT = () => {
     return (

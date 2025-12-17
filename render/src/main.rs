@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use tempfile::TempDir;
 
-use crate::ffmpeg::SegmentWriter;
+use crate::ffmpeg::{AudioPlanResolved, SegmentWriter, mux_audio_plan_into_mp4};
 
 #[derive(Serialize)]
 struct ProgressPayload {
@@ -263,6 +263,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     crate::ffmpeg::concat_segments_mp4(segs, &PathBuf::from("frames/output.mp4")).await?;
+
+    let audio_plan_url = std::env::var("RENDER_AUDIO_PLAN_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3000/render_audio_plan".to_string());
+    if let Ok(resp) = Client::new().get(&audio_plan_url).send().await {
+        if resp.status().is_success() {
+            if let Ok(plan) = resp.json::<AudioPlanResolved>().await {
+                if !plan.segments.is_empty() {
+                    let input_video = PathBuf::from("frames/output.mp4");
+                    let temp_video = PathBuf::from("frames/output.audio.mp4");
+                    mux_audio_plan_into_mp4(&input_video, &temp_video, &plan, total_frames, fps)
+                        .await?;
+                    tokio::fs::remove_file(&input_video).await.ok();
+                    tokio::fs::rename(&temp_video, &input_video).await?;
+                }
+            }
+        }
+    }
 
     let final_completed = completed.load(Ordering::Relaxed);
     let _ = progress_client
