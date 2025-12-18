@@ -26,12 +26,12 @@ const MiniTimeline = ({ progress }: { progress: number }) => {
       <div style={{ marginTop: 16, position: "relative", height: 120 }}>
         <div style={{ position: "absolute", inset: 0, borderRadius: 12, background: "rgba(3, 7, 18, 0.65)", border: `1px solid ${THEME.border}` }} />
 
-          {[
-            { top: 16, left: 8, width: 34, color: THEME.accent },
-            { top: 44, left: 16, width: 48, color: THEME.accent2 },
-            { top: 16, left: 48, width: 26, color: THEME.warn },
-            { top: 44, left: 68, width: 22, color: THEME.accent },
-          ].map((c, i) => (
+        {[
+          { top: 16, left: 8, width: 34, color: THEME.accent },
+          { top: 44, left: 16, width: 48, color: THEME.accent2 },
+          { top: 16, left: 48, width: 26, color: THEME.warn },
+          { top: 44, left: 68, width: 22, color: THEME.accent },
+        ].map((c, i) => (
           <div
             key={i}
             style={{
