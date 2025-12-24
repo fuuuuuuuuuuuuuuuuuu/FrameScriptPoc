@@ -52,8 +52,7 @@ const TitleScene = () => {
     await ctx.sleep(seconds(0.3))
 
     const overshootEase = cubicBezier(1,0,.49,1.77)
-    await ctx.move(scale).to(1.25, seconds(0.6), overshootEase)
-    //await ctx.move(scale).to(1.03, seconds(0.35), easeOutCubic)
+    await ctx.move(scale).to(1.2, seconds(0.6), overshootEase)
     await ctx.sleep(seconds(0.8))
   }, [])
 

@@ -113,6 +113,13 @@ export const RenderSettingsPage = () => {
     setStatus(null);
     try {
       try {
+        await fetch("http://127.0.0.1:3000/reset", {
+          method: "POST",
+        });
+      } catch (_error) {
+        // ignore; still try to start render
+      }
+      try {
         await fetch("http://127.0.0.1:3000/render_audio_plan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

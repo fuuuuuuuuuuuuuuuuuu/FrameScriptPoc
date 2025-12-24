@@ -112,7 +112,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let encode = splited[5].to_string();
     let preset = splited[6].to_string();
 
-    let chunk = total_frames / (workers - 1).max(1);
+    let worker_count = workers.max(1);
+    let base_chunk = total_frames / worker_count;
+    let remainder = total_frames % worker_count;
     let progress_url = std::env::var("RENDER_PROGRESS_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:3000/render_progress".to_string());
     let progress_client = Client::new();
@@ -186,8 +188,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut tasks = FuturesUnordered::new();
 
     static DIRECTORY: &'static str = "frames";
-    let output_path = std::env::var("RENDER_OUTPUT_PATH")
-        .unwrap_or_else(|_| "output.mp4".to_string());
+    let output_path =
+        std::env::var("RENDER_OUTPUT_PATH").unwrap_or_else(|_| "output.mp4".to_string());
     let output_path = PathBuf::from(output_path);
 
     tokio::fs::remove_dir_all(DIRECTORY).await.ok();
@@ -195,10 +197,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let start = Instant::now();
 
-    for worker_id in 0..workers {
-        let start = worker_id * chunk;
-        let end = ((worker_id + 1) * chunk).min(total_frames);
+    let mut ranges = Vec::new();
+    for worker_id in 0..worker_count {
+        let start = worker_id * base_chunk;
+        let end = start + base_chunk;
+        if start < end {
+            ranges.push((start, end));
+        }
+    }
+    if remainder > 0 {
+        let start = worker_count * base_chunk;
+        let end = total_frames;
+        if start < end {
+            ranges.push((start, end));
+        }
+    }
 
+    for (worker_id, (start, end)) in ranges.into_iter().enumerate() {
         let encode_clone = encode.clone();
         let preset_clone = preset.clone();
 
@@ -295,7 +310,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut segs = Vec::new();
 
-    for worker_id in 0..workers {
+    for worker_id in 0..worker_count + if remainder > 0 { 1 } else { 0 } {
         let path = PathBuf::from(format!("{}/segment-{worker_id:03}.mp4", DIRECTORY));
         if tokio::fs::metadata(&path).await.is_ok() {
             segs.push(path);
@@ -328,10 +343,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         tokio::fs::remove_file(&output_path).await.ok();
         if let Err(err) = tokio::fs::rename(&working_output, &output_path).await {
-            eprintln!(
-                "[render] rename failed ({}), falling back to copy",
-                err
-            );
+            eprintln!("[render] rename failed ({}), falling back to copy", err);
             if tokio::fs::copy(&working_output, &output_path).await.is_ok() {
                 tokio::fs::remove_file(&working_output).await.ok();
             }
