@@ -34,12 +34,13 @@ export type Variable<T> = {
 }
 
 type MoveController<T> = {
-  to: (value: T, durationFrames: number, easing?: Easing) => Promise<void>
+  to: (value: T, durationFrames: number, easing?: Easing) => AnimationHandle
 }
 
 type AnimationContext = {
-  sleep: (frames: number) => Promise<void>
+  sleep: (frames: number) => AnimationHandle
   move: <T extends VariableType>(variable: Variable<T>) => MoveController<T>
+  parallel: (handles: AnimationHandle[]) => AnimationHandle
 }
 
 type InternalContext = AnimationContext & {
@@ -118,6 +119,29 @@ const sampleVariable = (state: VariableStateBase, frame: number) => {
     value = segment.to
   }
   return value
+}
+
+export class AnimationHandle {
+  private resolved = false
+  public readonly endFrame: number
+  private ctx: InternalContext
+
+  constructor(ctx: InternalContext, endFrame: number) {
+    this.ctx = ctx
+    this.endFrame = endFrame
+  }
+
+  then(resolve: () => void, _reject?: (reason?: unknown) => void) {
+    if (!this.resolved) {
+      this.resolved = true
+      if (this.ctx.now < this.endFrame) {
+        this.ctx.now = this.endFrame
+      }
+      this.ctx.maxFrame = Math.max(this.ctx.maxFrame, this.ctx.now)
+    }
+    resolve()
+    return undefined
+  }
 }
 
 export function useVariable(initial: number): Variable<number>
@@ -201,15 +225,15 @@ export const useAnimation = (
         variable._state.ownerId = ownerId
         variablesRef.current.add(variable)
       },
-      sleep: async (frames: number) => {
+      sleep: (frames: number) => {
         const delta = toFrames(frames)
-        internal.now += delta
-        internal.maxFrame = Math.max(internal.maxFrame, internal.now)
+        const end = internal.now + delta
+        return new AnimationHandle(internal, end)
       },
       move: (variable) => {
         internal.register(variable as Variable<unknown>)
         return {
-          to: async (value, durationFrames, easing) => {
+          to: (value, durationFrames, easing) => {
             if (isDev) {
               assertCompatibleValue(variable._state.kind, value)
             }
@@ -225,10 +249,18 @@ export const useAnimation = (
               to: value as VariableType,
               easing,
             })
-            internal.now = end + 1
-            internal.maxFrame = Math.max(internal.maxFrame, internal.now)
+            return new AnimationHandle(internal, end + 1)
           },
         }
+      },
+      parallel: (handles: AnimationHandle[]) => {
+        let maxEnd = internal.now
+        for (const handle of handles) {
+          if (handle instanceof AnimationHandle) {
+            maxEnd = Math.max(maxEnd, handle.endFrame)
+          }
+        }
+        return new AnimationHandle(internal, maxEnd)
       },
     }
 
