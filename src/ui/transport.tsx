@@ -91,7 +91,7 @@ export const TransportControls = () => {
 
   const durationFrames = useMemo(() => {
     const maxClipEnd = clips.reduce((max, clip) => Math.max(max, clip.end + 1), 0)
-    return Math.max(Math.round(fps * 5), maxClipEnd, currentFrame + 1)
+    return Math.max(1, maxClipEnd, currentFrame + 1)
   }, [clips, fps, currentFrame])
 
   const stopPlayback = useCallback(() => {
