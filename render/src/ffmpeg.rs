@@ -1,16 +1,58 @@
 use std::{
     error::Error,
     collections::BTreeMap,
+    io,
     path::{Path, PathBuf},
     process::Stdio,
+    sync::{Mutex, OnceLock},
 };
 
 use serde::Deserialize;
 use tokio::{
     fs,
     io::AsyncWriteExt,
-    process::{Child, ChildStdin, Command},
+    process::{Child, ChildStdin, Command as TokioCommand},
 };
+
+static FFMPEG_PATH: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+fn read_env_path(env_var: &str) -> Option<String> {
+    let value = std::env::var(env_var).ok()?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+fn resolve_ffmpeg_path() -> Result<String, Box<dyn Error>> {
+    let lock = FFMPEG_PATH.get_or_init(|| Mutex::new(None));
+    let mut cached = lock.lock().unwrap();
+    if let Some(path) = cached.as_ref() {
+        return Ok(path.clone());
+    }
+
+    match std::process::Command::new("ffmpeg")
+        .arg("-version")
+        .output()
+    {
+        Ok(_) => {
+            let path = "ffmpeg".to_string();
+            *cached = Some(path.clone());
+            Ok(path)
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            if let Some(path) = read_env_path("FRAMESCRIPT_FFMPEG_PATH") {
+                *cached = Some(path.clone());
+                Ok(path)
+            } else {
+                Err("ffmpeg not found on PATH and FRAMESCRIPT_FFMPEG_PATH is not set".into())
+            }
+        }
+        Err(error) => Err(format!("failed to run ffmpeg: {error}").into()),
+    }
+}
 
 pub struct SegmentWriter {
     child: Child,
@@ -36,7 +78,8 @@ impl SegmentWriter {
 
         let preset = preset.unwrap_or("medium");
 
-        let mut cmd = Command::new("ffmpeg");
+        let ffmpeg = resolve_ffmpeg_path()?;
+        let mut cmd = TokioCommand::new(ffmpeg);
         cmd.arg("-y")
             .arg("-hide_banner")
             .arg("-loglevel")
@@ -138,7 +181,8 @@ pub async fn concat_segments_mp4(
 
     fs::write(&list_path, lines).await?;
 
-    let status = Command::new("ffmpeg")
+    let ffmpeg = resolve_ffmpeg_path()?;
+    let status = TokioCommand::new(ffmpeg)
         .arg("-y")
         .arg("-hide_banner")
         .arg("-loglevel")
@@ -221,7 +265,8 @@ pub async fn mux_audio_plan_into_mp4(
         }
     }
 
-    let mut cmd = Command::new("ffmpeg");
+    let ffmpeg = resolve_ffmpeg_path()?;
+    let mut cmd = TokioCommand::new(ffmpeg);
     cmd.arg("-y")
         .arg("-hide_banner")
         .arg("-loglevel")

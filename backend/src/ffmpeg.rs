@@ -1,6 +1,7 @@
 pub mod hw_decoder;
 pub mod sw_decoder;
 pub(crate) mod command;
+pub(crate) mod bin;
 
 use serde::Deserialize;
 use std::process::Command;
@@ -25,7 +26,8 @@ struct FfprobeOutput {
 }
 
 fn run_ffprobe(path: &str, select_streams: Option<&str>, entries: &str) -> Result<FfprobeOutput, String> {
-    let mut cmd = Command::new("ffprobe");
+    let ffprobe = bin::ffprobe_path()?;
+    let mut cmd = Command::new(ffprobe);
     cmd.arg("-v")
         .arg("error")
         .arg("-print_format")

@@ -1,6 +1,8 @@
 use std::io::{self, Read};
 use std::process::{Command, Stdio};
 
+use crate::ffmpeg::bin::ffmpeg_path;
+
 pub(crate) fn extract_frames_rgba(
     path: &str,
     start_frame: usize,
@@ -24,7 +26,8 @@ pub(crate) fn extract_frames_rgba(
         start_frame, end_frame, dst_width, dst_height
     );
 
-    let mut cmd = Command::new("ffmpeg");
+    let ffmpeg = ffmpeg_path()?;
+    let mut cmd = Command::new(ffmpeg);
     cmd.arg("-hide_banner")
         .arg("-loglevel")
         .arg("error")

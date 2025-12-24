@@ -10,6 +10,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
+import * as ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import * as ffprobeInstaller from "@ffprobe-installer/ffprobe";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +19,29 @@ const __dirname = path.dirname(__filename);
 const useDevServer = process.env.VITE_DEV_SERVER_URL !== undefined;
 const runMode = process.env.FRAMESCRIPT_RUN_MODE ?? (useDevServer ? "dev" : "bin");
 const useBinaries = runMode !== "dev";
+
+const resolveBundledBinaryPath = (installer: unknown) => {
+  const candidate =
+    (installer as { path?: string; default?: { path?: string } } | undefined)?.path ??
+    (installer as { default?: { path?: string } } | undefined)?.default?.path;
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate;
+  }
+  return null;
+};
+
+function getFfmpegEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  const ffmpegPath = process.env.FRAMESCRIPT_FFMPEG_PATH ?? resolveBundledBinaryPath(ffmpegInstaller);
+  const ffprobePath = process.env.FRAMESCRIPT_FFPROBE_PATH ?? resolveBundledBinaryPath(ffprobeInstaller);
+  if (ffmpegPath) {
+    env.FRAMESCRIPT_FFMPEG_PATH = ffmpegPath;
+  }
+  if (ffprobePath) {
+    env.FRAMESCRIPT_FFPROBE_PATH = ffprobePath;
+  }
+  return env;
+}
 
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
@@ -88,6 +113,10 @@ function startBackend(): Promise<void> {
     backendProcess = spawn("cargo", ["run"], {
       cwd: backendCwd,
       stdio: "pipe",
+      env: {
+        ...process.env,
+        ...getFfmpegEnv(),
+      },
     });
 
     console.log("[backend] spawn: cargo run (dev)");
@@ -103,6 +132,10 @@ function startBackend(): Promise<void> {
 
     backendProcess = spawn(info.path, [], {
       stdio: "pipe",
+      env: {
+        ...process.env,
+        ...getFfmpegEnv(),
+      },
     });
 
     console.log("[backend] spawn:", info.path);
@@ -224,6 +257,7 @@ function startRenderProcess(payload: RenderStartPayload) {
         cwd: renderCwd,
         env: {
           ...process.env,
+          ...getFfmpegEnv(),
           RENDER_PAGE_URL: getRenderPageUrl(),
           RENDER_OUTPUT_PATH: getRenderOutputPath(),
         },
@@ -257,6 +291,7 @@ function startRenderProcess(payload: RenderStartPayload) {
       renderChild = spawn(binPath, [argsString], {
         env: {
           ...process.env,
+          ...getFfmpegEnv(),
           RENDER_PAGE_URL: getRenderPageUrl(),
           RENDER_OUTPUT_PATH: getRenderOutputPath(),
         },
