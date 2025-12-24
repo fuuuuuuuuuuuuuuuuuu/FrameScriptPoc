@@ -50,6 +50,81 @@ type InternalContext = AnimationContext & {
 }
 
 let nextOwnerId = 1
+const ANIMATION_TRACKER_KEY = "__frameScript_AnimationTracker"
+
+type AnimationTracker = {
+  pending: number
+  start: () => () => void
+  wait: () => Promise<void>
+}
+
+const getAnimationTracker = (): AnimationTracker => {
+  const g = globalThis as unknown as Record<string, unknown>
+  const existing = g[ANIMATION_TRACKER_KEY] as AnimationTracker | undefined
+  if (existing) return existing
+
+  let pending = 0
+  const waiters = new Set<() => void>()
+
+  const notifyIfReady = () => {
+    if (pending !== 0) return
+    for (const resolve of Array.from(waiters)) {
+      resolve()
+    }
+    waiters.clear()
+  }
+
+  const tracker: AnimationTracker = {
+    get pending() {
+      return pending
+    },
+    start: () => {
+      pending += 1
+      let done = false
+      return () => {
+        if (done) return
+        done = true
+        pending = Math.max(0, pending - 1)
+        notifyIfReady()
+      }
+    },
+    wait: () => {
+      if (pending === 0) {
+        return Promise.resolve()
+      }
+      return new Promise<void>((resolve) => {
+        waiters.add(resolve)
+      })
+    },
+  }
+
+  g[ANIMATION_TRACKER_KEY] = tracker
+  return tracker
+}
+
+const installAnimationApi = () => {
+  if (typeof window === "undefined") return
+  const tracker = getAnimationTracker()
+  const waitAnimationsReady = async () => {
+    // Wait until pending is zero and stays zero through a tick (handles StrictMode double-effects).
+    while (true) {
+      if (tracker.pending === 0) {
+        if (typeof window.requestAnimationFrame !== "function") {
+          return
+        }
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()))
+        if (tracker.pending === 0) return
+      }
+      await tracker.wait()
+    }
+  }
+
+  ;(window as any).__frameScript = {
+    ...(window as any).__frameScript,
+    waitAnimationsReady,
+    getAnimationsPending: () => tracker.pending,
+  }
+}
 
 const toFrames = (value: number) => Math.max(0, Math.round(value))
 const isDev = typeof import.meta !== "undefined" && Boolean((import.meta as any).env?.DEV)
@@ -198,6 +273,16 @@ export const useAnimation = (
   useProvideClipDuration(durationFrames)
 
   useLayoutEffect(() => {
+    installAnimationApi()
+    const tracker = getAnimationTracker()
+    const finishPending = tracker.start()
+    let finished = false
+    const finalize = () => {
+      if (finished) return
+      finished = true
+      finishPending()
+    }
+
     if (!ownerIdRef.current) {
       ownerIdRef.current = nextOwnerId
       nextOwnerId += 1
@@ -272,11 +357,13 @@ export const useAnimation = (
       }
 
       if (runIdRef.current !== runId) {
+        finalize()
         return
       }
       const nextDuration = Math.max(1, Math.round(internal.maxFrame))
       setDurationFrames(nextDuration)
       setReady(true)
+      finalize()
     }
 
     void execute()
@@ -289,6 +376,7 @@ export const useAnimation = (
           variable._state.segments.length = 0
         }
       }
+      finalize()
     }
   }, deps)
 
