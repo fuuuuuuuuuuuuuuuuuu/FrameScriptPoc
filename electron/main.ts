@@ -474,7 +474,26 @@ function setupRenderIpc() {
 }
 
 function setupMenu() {
-  const template: MenuItemConstructorOptions[] = [
+  const template: MenuItemConstructorOptions[] = [];
+
+  if (process.platform === "darwin") {
+    template.push({
+      label: APP_NAME,
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    });
+  }
+
+  template.push(
     {
       label: "File",
       submenu: [
@@ -529,7 +548,7 @@ function setupMenu() {
         },
       ],
     },
-  ];
+  );
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
