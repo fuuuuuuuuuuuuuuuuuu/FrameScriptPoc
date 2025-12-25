@@ -97,4 +97,4 @@ npm run start
 
 ## ドキュメント
 
-- [FrameScript Docs](https://frame-script.github.io/FrameScript/)
+- [FrameScript Docs](https://frame-script.github.io/FrameScript/ja)
