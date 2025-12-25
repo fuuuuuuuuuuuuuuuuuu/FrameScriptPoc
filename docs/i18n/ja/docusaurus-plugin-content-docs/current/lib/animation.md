@@ -51,6 +51,8 @@ const CircleScene = () => {
 
 上の例では、`useVariable` で位置と不透明度を作り、`useAnimation` で「移動」と「フェードイン」を同時に走らせています。`variable.use()` を JSX のスタイルに使うだけで、現在フレームの値が自動で反映されます。
 
+![](./circle.gif)
+
 ## async/await で順序を入れ替えられる
 
 `useAnimation` は async/await で進行管理できます。await の順番を変えることで、同じモーションでも「いつ待つか」を自由に調整できます。

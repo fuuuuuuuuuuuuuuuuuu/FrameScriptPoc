@@ -1,6 +1,6 @@
 ---
 title: Project Structure
-sidebar_position: 2
+sidebar_position: 4
 ---
 
 The project is split into the Studio app and the content you author.

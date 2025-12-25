@@ -51,6 +51,8 @@ const CircleScene = () => {
 
 In this example, `useVariable` creates position and opacity, while `useAnimation` drives a move and a fade at the same time. Use `variable.use()` in JSX styles to bind the current-frame value.
 
+![](./circle.gif)
+
 ## You can reorder awaits
 
 `useAnimation` uses async/await for flow control. By changing the await order, you can decide when to wait even with the same motions.

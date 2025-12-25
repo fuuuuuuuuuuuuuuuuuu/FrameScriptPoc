@@ -1,6 +1,6 @@
 ---
 title: プロジェクト構成
-sidebar_position: 2
+sidebar_position: 4
 ---
 
 プロジェクトは Studio 本体と、あなたが書くコンテンツに分かれています。
