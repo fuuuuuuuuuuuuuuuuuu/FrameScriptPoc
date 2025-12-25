@@ -2,7 +2,7 @@
 
 FrameScript is a video editing & motion graphics tool built with React + CSS.
 
-![日本語.md](./README.ja.md)
+[日本語.md](./README.ja.md)
 
 ## FrameScript features
 
