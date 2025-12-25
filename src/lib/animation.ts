@@ -5,8 +5,38 @@ import type { Easing } from "./animation/functions"
 
 type Lerp<T> = (from: T, to: T, t: number) => T
 
+/**
+ * 2D vector type.
+ *
+ * 2 次元ベクトル型。
+ *
+ * @example
+ * ```ts
+ * const v: Vec2 = { x: 10, y: 20 }
+ * ```
+ */
 export type Vec2 = { x: number; y: number }
+/**
+ * 3D vector type.
+ *
+ * 3 次元ベクトル型。
+ *
+ * @example
+ * ```ts
+ * const v: Vec3 = { x: 1, y: 2, z: 3 }
+ * ```
+ */
 export type Vec3 = { x: number; y: number; z: number }
+/**
+ * Supported variable value types for animation.
+ *
+ * アニメーション変数で使える値の型。
+ *
+ * @example
+ * ```ts
+ * const value: VariableType = { x: 0, y: 0 }
+ * ```
+ */
 export type VariableType = number | Vec2 | Vec3
 
 type VariableKind = "number" | "vec2" | "vec3"
@@ -27,6 +57,17 @@ type VariableStateBase = {
   ownerId: number | null
 }
 
+/**
+ * Animation variable with timeline-aware sampling.
+ *
+ * タイムラインに応じた値取得ができるアニメーション変数。
+ *
+ * @example
+ * ```tsx
+ * const pos = useVariable({ x: 0, y: 0 })
+ * const value = pos.use()
+ * ```
+ */
 export type Variable<T> = {
   use: () => T
   get: (frame: number) => T
@@ -196,6 +237,17 @@ const sampleVariable = (state: VariableStateBase, frame: number) => {
   return value
 }
 
+/**
+ * Thenable handle returned by animation commands.
+ *
+ * アニメーション操作が返す thenable ハンドル。
+ *
+ * @example
+ * ```tsx
+ * const handle = ctx.move(position).to({ x: 100, y: 0 }, seconds(1))
+ * await handle
+ * ```
+ */
 export class AnimationHandle {
   private resolved = false
   public readonly endFrame: number
@@ -219,6 +271,17 @@ export class AnimationHandle {
   }
 }
 
+/**
+ * Creates an animatable variable.
+ *
+ * アニメーション可能な変数を作成します。
+ *
+ * @example
+ * ```tsx
+ * const opacity = useVariable(0)
+ * const pos = useVariable({ x: 0, y: 0 })
+ * ```
+ */
 export function useVariable(initial: number): Variable<number>
 export function useVariable(initial: Vec2): Variable<Vec2>
 export function useVariable(initial: Vec3): Variable<Vec3>
@@ -260,6 +323,19 @@ export function useVariable<T extends VariableType>(initial: T): Variable<T> {
   return { use: useValue, get, _state: state }
 }
 
+/**
+ * Defines an animation sequence and reports its duration to the current clip.
+ *
+ * アニメーションシーケンスを定義し、クリップへ長さを報告します。
+ *
+ * @example
+ * ```tsx
+ * useAnimation(async (ctx) => {
+ *   await ctx.sleep(seconds(0.5))
+ *   await ctx.move(pos).to({ x: 200, y: 0 }, seconds(1))
+ * }, [])
+ * ```
+ */
 export const useAnimation = (
   run: (ctx: AnimationContext) => Promise<void> | void,
   deps: DependencyList = [run],

@@ -1,9 +1,35 @@
 import { useSyncExternalStore } from "react"
 
+/**
+ * Audio source reference used for timeline audio segments.
+ *
+ * タイムラインの音声セグメントで使う参照情報。
+ *
+ * @example
+ * ```ts
+ * const src: AudioSourceRef = { kind: "video", path: "assets/demo.mp4" }
+ * ```
+ */
 export type AudioSourceRef =
   | { kind: "video"; path: string }
   | { kind: "sound"; path: string } // reserved for future <Sound />
 
+/**
+ * Audio segment mapped onto the project timeline.
+ *
+ * プロジェクトタイムライン上の音声セグメント。
+ *
+ * @example
+ * ```ts
+ * const seg: AudioSegment = {
+ *   id: "music",
+ *   source: { kind: "sound", path: "assets/music.mp3" },
+ *   projectStartFrame: 0,
+ *   sourceStartFrame: 0,
+ *   durationFrames: 300,
+ * }
+ * ```
+ */
 export type AudioSegment = {
   id: string
   source: AudioSourceRef
@@ -28,6 +54,16 @@ const notifyGlobal = () => {
 
 const getGlobalSegments = () => globalSegments
 
+/**
+ * Registers an audio segment in the global audio plan store.
+ *
+ * グローバル音声プランにセグメントを登録します。
+ *
+ * @example
+ * ```ts
+ * registerAudioSegmentGlobal(seg)
+ * ```
+ */
 export const registerAudioSegmentGlobal = (segment: AudioSegment) => {
   const existing = globalSegments.find((item) => item.id === segment.id)
   if (
@@ -49,6 +85,16 @@ export const registerAudioSegmentGlobal = (segment: AudioSegment) => {
   notifyGlobal()
 }
 
+/**
+ * Unregisters an audio segment by id.
+ *
+ * ID 指定で音声セグメントを削除します。
+ *
+ * @example
+ * ```ts
+ * unregisterAudioSegmentGlobal("music")
+ * ```
+ */
 export const unregisterAudioSegmentGlobal = (id: string) => {
   const next = globalSegments.filter((segment) => segment.id !== id)
   if (next.length === globalSegments.length) return
@@ -56,6 +102,16 @@ export const unregisterAudioSegmentGlobal = (id: string) => {
   notifyGlobal()
 }
 
+/**
+ * Returns the current list of audio segments.
+ *
+ * 現在の音声セグメント一覧を返します。
+ *
+ * @example
+ * ```ts
+ * const segments = useAudioSegments()
+ * ```
+ */
 export const useAudioSegments = () => {
   return useSyncExternalStore(subscribeGlobal, getGlobalSegments)
 }

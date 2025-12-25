@@ -9,16 +9,46 @@ import { VideoCanvasRender } from "./video-render";
 import type { Trim } from "../trim";
 import { resolveTrimFrames } from "../trim";
 
+/**
+ * Video source descriptor.
+ *
+ * 動画ソースの記述。
+ *
+ * @example
+ * ```ts
+ * const video: Video = { path: "assets/demo.mp4" }
+ * ```
+ */
 export type Video = {
   path: string
 }
 
+/**
+ * Props for <Video>.
+ *
+ * <Video> の props。
+ *
+ * @example
+ * ```tsx
+ * <Video video="assets/demo.mp4" />
+ * ```
+ */
 export type VideoProps = {
   video: Video | string
   style?: CSSProperties
   trim?: Trim
 }
 
+/**
+ * Normalizes a video input into a Video object.
+ *
+ * Video 入力を正規化します。
+ *
+ * @example
+ * ```ts
+ * const v = normalizeVideo("assets/demo.mp4")
+ * ```
+ */
 export const normalizeVideo = (video: Video | string): Video => {
   if (typeof video === "string") return { path: video }
   return video
@@ -38,6 +68,16 @@ const buildMetaUrl = (video: Video) => {
 
 const videoLengthCache = new Map<string, number>()
 
+/**
+ * Returns video length in frames (project FPS).
+ *
+ * 動画の長さをフレーム数で返します。
+ *
+ * @example
+ * ```ts
+ * const frames = video_length("assets/demo.mp4")
+ * ```
+ */
 export const video_length = (video: Video | string): number => {
   const resolved = normalizeVideo(video)
 
@@ -69,6 +109,16 @@ export const video_length = (video: Video | string): number => {
 
 const videoFpsCache = new Map<string, number>()
 
+/**
+ * Returns the source video FPS.
+ *
+ * 動画ソースの FPS を返します。
+ *
+ * @example
+ * ```ts
+ * const fps = video_fps("assets/demo.mp4")
+ * ```
+ */
 export const video_fps = (video: Video | string): number => {
   const resolved = normalizeVideo(video)
 
@@ -95,11 +145,31 @@ export const video_fps = (video: Video | string): number => {
   return 0
 }
 
+/**
+ * Resolved trim values for video rendering.
+ *
+ * 動画レンダー用のトリム解決結果。
+ *
+ * @example
+ * ```ts
+ * const trim: VideoResolvedTrimProps = { trimStartFrames: 0, trimEndFrames: 0 }
+ * ```
+ */
 export type VideoResolvedTrimProps = {
   trimStartFrames: number
   trimEndFrames: number
 }
 
+/**
+ * Places a video in the timeline (audio included).
+ *
+ * タイムライン上に動画を配置します（音声付き）。
+ *
+ * @example
+ * ```tsx
+ * <Video video="assets/demo.mp4" trim={{ from: 30, duration: 120 }} />
+ * ```
+ */
 export const Video = ({ video, style, trim }: VideoProps) => {
   const isRender = useIsRender()
   const id = useId()

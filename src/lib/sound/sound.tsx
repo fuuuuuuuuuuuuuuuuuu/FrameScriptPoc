@@ -8,15 +8,45 @@ import { useIsPlaying, useIsRender } from "../studio-state"
 import type { Trim } from "../trim"
 import { resolveTrimFrames } from "../trim"
 
+/**
+ * Sound source descriptor.
+ *
+ * 音声ソースの記述。
+ *
+ * @example
+ * ```ts
+ * const sound: Sound = { path: "assets/music.mp3" }
+ * ```
+ */
 export type Sound = {
   path: string
 }
 
+/**
+ * Props for <Sound>.
+ *
+ * <Sound> の props。
+ *
+ * @example
+ * ```tsx
+ * <Sound sound="assets/music.mp3" />
+ * ```
+ */
 export type SoundProps = {
   sound: Sound | string
   trim?: Trim
 }
 
+/**
+ * Normalizes a sound input into a Sound object.
+ *
+ * Sound 入力を正規化します。
+ *
+ * @example
+ * ```ts
+ * const s = normalizeSound("assets/music.mp3")
+ * ```
+ */
 export const normalizeSound = (sound: Sound | string): Sound => {
   if (typeof sound === "string") return { path: sound }
   return sound
@@ -31,6 +61,16 @@ const buildMetaUrl = (sound: Sound) => {
 const soundLengthCache = new Map<string, number>()
 const MAX_REASONABLE_DURATION_MS = 1000 * 60 * 60 * 24 * 7 // 7 days
 
+/**
+ * Returns sound length in frames (project FPS).
+ *
+ * 音声の長さをフレーム数で返します。
+ *
+ * @example
+ * ```ts
+ * const frames = sound_length("assets/music.mp3")
+ * ```
+ */
 export const sound_length = (sound: Sound | string): number => {
   const resolved = normalizeSound(sound)
 
@@ -64,6 +104,16 @@ export const sound_length = (sound: Sound | string): number => {
   return 0
 }
 
+/**
+ * Places an audio track on the timeline.
+ *
+ * タイムライン上に音声トラックを配置します。
+ *
+ * @example
+ * ```tsx
+ * <Sound sound="assets/music.mp3" trim={{ trimStart: 30 }} />
+ * ```
+ */
 export const Sound = ({ sound, trim }: SoundProps) => {
   const id = useId()
   const clipRange = useClipRange()

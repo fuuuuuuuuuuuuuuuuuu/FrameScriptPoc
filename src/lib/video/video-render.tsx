@@ -14,11 +14,31 @@ const trackPending = (manual: ManualPromise<void>) => {
   manual.promise.finally(() => pendingFramePromises.delete(manual.promise));
 };
 
+/**
+ * Props for VideoCanvasRender (render-mode video canvas).
+ *
+ * レンダーモード用 VideoCanvasRender の props。
+ *
+ * @example
+ * ```tsx
+ * <VideoCanvasRender video="assets/demo.mp4" />
+ * ```
+ */
 export type VideoCanvasRenderProps = {
   video: Video | string
   style?: CSSProperties
 } & VideoResolvedTrimProps
 
+/**
+ * Renders video frames to a canvas in render mode.
+ *
+ * レンダーモードで動画フレームを canvas に描画します。
+ *
+ * @example
+ * ```tsx
+ * <VideoCanvasRender video="assets/demo.mp4" trimStartFrames={30} trimEndFrames={0} />
+ * ```
+ */
 export const VideoCanvasRender = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: VideoCanvasRenderProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);

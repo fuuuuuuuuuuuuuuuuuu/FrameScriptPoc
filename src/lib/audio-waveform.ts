@@ -1,5 +1,15 @@
 import { fetchAudioBuffer } from "./audio"
 
+/**
+ * Cached waveform data (peaks + duration).
+ *
+ * 波形データ（ピークと長さ）。
+ *
+ * @example
+ * ```ts
+ * const data: WaveformData = { peaks: new Float32Array(0), durationSec: 0 }
+ * ```
+ */
 export type WaveformData = {
   peaks: Float32Array
   durationSec: number
@@ -45,6 +55,16 @@ const buildWaveform = (buffer: AudioBuffer, bins: number) => {
   return peaks
 }
 
+/**
+ * Loads waveform data for a file path (cached).
+ *
+ * ファイルパスから波形データを読み込みます（キャッシュ付き）。
+ *
+ * @example
+ * ```ts
+ * const data = await loadWaveformData("assets/music.mp3")
+ * ```
+ */
 export const loadWaveformData = async (path: string): Promise<WaveformData | null> => {
   if (!path) return null
   if (waveformCache.has(path)) {

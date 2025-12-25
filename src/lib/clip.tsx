@@ -24,6 +24,17 @@ type DurationReporter = {
 // Duration reporting from descendants (used by Clip)
 const DurationReportContext = createContext<DurationReporter | null>(null)
 
+/**
+ * Reports a clip duration from inside a child component.
+ *
+ * 子コンポーネントからクリップ長を報告します。
+ *
+ * @example
+ * ```tsx
+ * const duration = seconds(2)
+ * useProvideClipDuration(duration)
+ * ```
+ */
 export const useProvideClipDuration = (frames: number | null | undefined) => {
   const report = useContext(DurationReportContext)
   const id = useId()
@@ -42,6 +53,18 @@ export const useProvideClipDuration = (frames: number | null | undefined) => {
 }
 
 // Static clip with explicit start/end. Treated as length 0 unless caller provides span.
+/**
+ * Renders a clip with explicit start/end frames.
+ *
+ * 明示的な start/end を持つ静的クリップを描画します。
+ *
+ * @example
+ * ```tsx
+ * <ClipStatic start={0} end={120} label="Intro">
+ *   <Scene />
+ * </ClipStatic>
+ * ```
+ */
 export const ClipStatic = ({ start, end, label, children, laneId }: ClipStaticProps) => {
   const currentFrame = useGlobalCurrentFrame()
   const timeline = useTimelineRegistration()
@@ -89,11 +112,31 @@ export const ClipStatic = ({ start, end, label, children, laneId }: ClipStaticPr
   )
 }
 
+/**
+ * Returns the absolute start frame of the current clip.
+ *
+ * 現在のクリップの開始フレームを返します。
+ *
+ * @example
+ * ```ts
+ * const start = useClipStart()
+ * ```
+ */
 export const useClipStart = () => {
   const ctx = useContext(ClipContext)
   return ctx?.baseStart ?? null
 }
 
+/**
+ * Returns the absolute frame range of the current clip.
+ *
+ * 現在のクリップの範囲を返します。
+ *
+ * @example
+ * ```ts
+ * const range = useClipRange()
+ * ```
+ */
 export const useClipRange = () => {
   const ctx = useContext(ClipContext)
   const start = ctx?.baseStart ?? null
@@ -104,11 +147,31 @@ export const useClipRange = () => {
   }, [start, end])
 }
 
+/**
+ * Returns the nesting depth of the current clip.
+ *
+ * 現在のクリップのネスト深度を返します。
+ *
+ * @example
+ * ```ts
+ * const depth = useClipDepth()
+ * ```
+ */
 export const useClipDepth = () => {
   const ctx = useContext(ClipContext)
   return ctx?.depth ?? null
 }
 
+/**
+ * Returns true when the current clip is active and visible.
+ *
+ * 現在のクリップがアクティブかつ表示中なら true を返します。
+ *
+ * @example
+ * ```ts
+ * const active = useClipActive()
+ * ```
+ */
 export const useClipActive = () => {
   const ctx = useContext(ClipContext)
   return ctx?.active ?? false
@@ -174,6 +237,18 @@ const ClipAnimationSync = ({ children }: { children: React.ReactNode }) => {
 }
 
 // Clip (duration-aware): computes its duration from children via useProvideClipDuration or duration prop.
+/**
+ * Duration-aware clip that derives length from children or `duration`.
+ *
+ * 子要素の報告や `duration` から長さを決めるクリップです。
+ *
+ * @example
+ * ```tsx
+ * <Clip label="Intro" duration={seconds(2)}>
+ *   <IntroScene />
+ * </Clip>
+ * ```
+ */
 export const Clip = ({
   start = 0,
   label,
@@ -239,6 +314,19 @@ export const Clip = ({
 
 // Places child <ClipStatic> components back-to-back on the same lane by rewiring their start/end.
 // Each child's duration is preserved (end - start inclusive); next clip starts at previous end + 1.
+/**
+ * Places <ClipStatic> elements sequentially on the same lane.
+ *
+ * <ClipStatic> を同一レーンで直列配置します。
+ *
+ * @example
+ * ```tsx
+ * <Serial>
+ *   <ClipStatic start={0} end={59} label="A">...</ClipStatic>
+ *   <ClipStatic start={0} end={29} label="B">...</ClipStatic>
+ * </Serial>
+ * ```
+ */
 export const Serial = ({ children }: { children: React.ReactNode }) => {
   const laneId = useId()
   const clips = Children.toArray(children).filter(isValidElement) as ClipStaticElement[]
@@ -267,7 +355,19 @@ export const Serial = ({ children }: { children: React.ReactNode }) => {
 
 type ClipElementDyn = React.ReactElement<ClipProps>
 
-// ClipSequence: Chains multiple <Clip> on the same lane, and can be treated as a block via _isClip.
+/**
+ * Chains <Clip> elements back-to-back and behaves like a single clip.
+ *
+ * <Clip> を連結して 1 つのクリップのように扱います。
+ *
+ * @example
+ * ```tsx
+ * <ClipSequence>
+ *   <Clip label="A">...</Clip>
+ *   <Clip label="B">...</Clip>
+ * </ClipSequence>
+ * ```
+ */
 export const ClipSequence = ({
   children,
   start = 0,

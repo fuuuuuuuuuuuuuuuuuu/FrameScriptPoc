@@ -26,10 +26,34 @@ const ClipStartContext: React.Context<number | null> = (() => {
   return created
 })()
 
+/**
+ * Provides a clip start offset for nested content.
+ *
+ * クリップの開始フレームを子要素に伝えるための Provider。
+ *
+ * @example
+ * ```tsx
+ * <WithClipStart start={60}>
+ *   <Scene />
+ * </WithClipStart>
+ * ```
+ */
 export const WithClipStart: React.FC<{ start: number; children: React.ReactNode }> = ({ start, children }) => {
   return <ClipStartContext value={start}>{children}</ClipStartContext>
 }
 
+/**
+ * Provides global current frame state for Studio and renderer.
+ *
+ * Studio とレンダラのためにグローバルな currentFrame を提供します。
+ *
+ * @example
+ * ```tsx
+ * <WithCurrentFrame>
+ *   <Project />
+ * </WithCurrentFrame>
+ * ```
+ */
 export const WithCurrentFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentFrame, setCurrentFrame] = useState(0)
 
@@ -59,6 +83,16 @@ export const WithCurrentFrame: React.FC<{ children: React.ReactNode }> = ({ chil
   )
 }
 
+/**
+ * Returns the current frame relative to the nearest clip start.
+ *
+ * 直近のクリップ開始を基準にした現在フレームを返します。
+ *
+ * @example
+ * ```tsx
+ * const frame = useCurrentFrame()
+ * ```
+ */
 export const useCurrentFrame = () => {
   const ctx = useContext(CurrentFrameContext);
   if (!ctx) throw new Error("useCurrentFrame must be used inside <WithCurrentFrame>");
@@ -67,18 +101,49 @@ export const useCurrentFrame = () => {
   return Math.max(ctx.currentFrame - clipStart, 0)
 }
 
+/**
+ * Returns the project-global current frame.
+ *
+ * プロジェクト全体の現在フレームを返します。
+ *
+ * @example
+ * ```tsx
+ * const frame = useGlobalCurrentFrame()
+ * ```
+ */
 export const useGlobalCurrentFrame = () => {
   const ctx = useContext(CurrentFrameContext);
   if (!ctx) throw new Error("useCurrentFrame must be used inside <WithCurrentFrame>");
   return ctx.currentFrame;
 }
 
+/**
+ * Returns a setter to update the global current frame.
+ *
+ * グローバルの currentFrame を更新する setter を返します。
+ *
+ * @example
+ * ```tsx
+ * const setFrame = useSetGlobalCurrentFrame()
+ * setFrame(120)
+ * ```
+ */
 export const useSetGlobalCurrentFrame = () => {
   const ctx = useContext(CurrentFrameContext)
   if (!ctx) throw new Error("useCurrentFrame must be used inside <WithCurrentFrame>");
   return ctx.setCurrentFrame;
 }
 
+/**
+ * Converts seconds to frames using project FPS.
+ *
+ * プロジェクトの FPS に基づいて秒数をフレーム数に変換します。
+ *
+ * @example
+ * ```ts
+ * const frames = seconds(1.5)
+ * ```
+ */
 export function seconds(seconds: number): number {
   return PROJECT_SETTINGS.fps * seconds
 }
