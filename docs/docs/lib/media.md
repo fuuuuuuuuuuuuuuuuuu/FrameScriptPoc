@@ -20,6 +20,14 @@ You can trim the source in frames:
 <Video video="assets/demo.mp4" trim={{ from: 30, duration: 120 }} />
 ```
 
+### `video_length`
+
+Returns the length of a video in frames.
+
+```tsx
+const length = video_length({ path: "assets/demo.mp4" })
+```
+
 ### `<Sound>`
 
 Plays audio in Studio and applies it to the final render.

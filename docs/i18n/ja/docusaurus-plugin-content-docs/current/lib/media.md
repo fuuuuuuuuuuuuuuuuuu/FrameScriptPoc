@@ -20,6 +20,12 @@ import { Video } from "../src/lib/video/video"
 <Video video="assets/demo.mp4" trim={{ from: 30, duration: 120 }} />
 ```
 
+### `video_length`
+動画の長さを取得します。
+```tsx
+const length = video_length({ path: "assets/demo.mp4" })
+```
+
 ### `<Sound>`
 
 Studio で音声を再生しつつ、レンダリング後にも該当箇所に音をつけます。

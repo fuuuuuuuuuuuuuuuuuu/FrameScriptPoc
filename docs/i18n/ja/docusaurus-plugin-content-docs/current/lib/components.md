@@ -42,6 +42,7 @@ export const PROJECT = () => (
 ### `<Clip>`
 
 子要素の報告や `duration` から長さを決定するクリップ。非アクティブ時は描画されません。
+また`duration`を指定しない場合は子要素（`<Video/>`や`<Sound/>`）の長さを自動で取得します
 
 ```tsx
 <Clip label="Intro" duration={seconds(3.5)}>

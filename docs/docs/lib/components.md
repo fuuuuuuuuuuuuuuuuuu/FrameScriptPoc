@@ -42,6 +42,7 @@ export const PROJECT = () => (
 ### `<Clip>`
 
 Determines its length from children or the `duration` prop. Inactive clips are not rendered.
+If you omit `duration`, it will use the length of child elements such as `<Video/>` or `<Sound/>`.
 
 ```tsx
 <Clip label="Intro" duration={seconds(3.5)}>
