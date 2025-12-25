@@ -1,6 +1,6 @@
 # !tyml @cargo/Cargo
 [package]
-name = "frame-script-render"
+name = "render"
 version = "0.1.0"
 edition = "2024"
 
