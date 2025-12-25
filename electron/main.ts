@@ -480,8 +480,6 @@ function setupMenu() {
     template.push({
       label: APP_NAME,
       submenu: [
-        { role: "about" },
-        { type: "separator" },
         { role: "services" },
         { type: "separator" },
         { role: "hide" },
