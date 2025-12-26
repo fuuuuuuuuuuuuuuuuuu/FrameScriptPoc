@@ -2,6 +2,8 @@
 
 FrameScript is a video editing & motion graphics tool built with React + CSS.
 
+![Discord](https://img.shields.io/discord/1454040226594033728)
+
 [日本語.md](./README.ja.md)
 
 ## FrameScript features

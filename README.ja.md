@@ -2,6 +2,8 @@
 
 FrameScriptはReact + CSSで描画・編集する動画編集 & モーショングラフィックスソフトです。
 
+![Discord](https://img.shields.io/discord/1454040226594033728)
+
 ## FrameScriptの特徴
 
 - React+CSSに代表されるWebのフロントエンド技術を用いて動画を構築
