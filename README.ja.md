@@ -2,7 +2,9 @@
 
 FrameScriptはReact + CSSで描画・編集する動画編集 & モーショングラフィックスソフトです。
 
-![Discord](https://img.shields.io/discord/1454040226594033728)
+<a href="https://discord.gg/Gpjvht3BqM" data-size="large">
+  <img alt="Discord" src="https://img.shields.io/discord/1454040226594033728.svg?label=Discord&logo=Discord&colorB=7289da&style=for-the-badge">
+</a>
 
 ## FrameScriptの特徴
 
