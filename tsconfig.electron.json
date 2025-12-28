@@ -5,6 +5,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ES2020",
+    "skipLibCheck": true,
     "noEmit": false,
     "isolatedModules": false,
     "types": ["node"]
