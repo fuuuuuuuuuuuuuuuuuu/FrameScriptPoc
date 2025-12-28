@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useCurrentFrame, useSetGlobalCurrentFrame } from "../frame";
 import { PROJECT_SETTINGS } from "../../../project/project";
 import { useIsPlaying, useIsRender } from "../studio-state";
@@ -176,13 +176,29 @@ export const Video = ({ video, style, trim }: VideoProps) => {
   const clipRange = useClipRange()
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const rawDurationFrames = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
+  const [durationOverrideFrames, setDurationOverrideFrames] = useState<number | null>(null)
+  useEffect(() => {
+    setDurationOverrideFrames(null)
+  }, [resolvedVideo.path])
+  const effectiveDurationFrames = durationOverrideFrames ?? rawDurationFrames
   const { trimStartFrames, trimEndFrames } = useMemo(
     () =>
       resolveTrimFrames({
-        rawDurationFrames,
+        rawDurationFrames: effectiveDurationFrames,
         trim,
       }),
-    [rawDurationFrames, trim],
+    [effectiveDurationFrames, trim],
+  )
+  const handleDurationResolve = useCallback(
+    (frames: number) => {
+      setDurationOverrideFrames((prev) => {
+        const normalized = Math.max(0, Math.floor(frames))
+        if (!Number.isFinite(normalized) || normalized <= 0) return prev
+        if (prev === normalized) return prev
+        return normalized
+      })
+    },
+    [],
   )
 
   useEffect(() => {
@@ -190,7 +206,7 @@ export const Video = ({ video, style, trim }: VideoProps) => {
 
     const projectStartFrame = clipRange.start
     const clipDurationFrames = Math.max(0, clipRange.end - clipRange.start + 1)
-    const availableFrames = Math.max(0, rawDurationFrames - trimStartFrames - trimEndFrames)
+    const availableFrames = Math.max(0, effectiveDurationFrames - trimStartFrames - trimEndFrames)
     const durationFrames = Math.min(clipDurationFrames, availableFrames)
     if (durationFrames <= 0) return
 
@@ -205,7 +221,7 @@ export const Video = ({ video, style, trim }: VideoProps) => {
     return () => {
       unregisterAudioSegmentGlobal(id)
     }
-  }, [clipRange, id, rawDurationFrames, resolvedVideo.path, trimEndFrames, trimStartFrames])
+  }, [clipRange, effectiveDurationFrames, id, resolvedVideo.path, trimEndFrames, trimStartFrames])
 
   if (isRender) {
     return (
@@ -223,14 +239,27 @@ export const Video = ({ video, style, trim }: VideoProps) => {
         style={style}
         trimStartFrames={trimStartFrames}
         trimEndFrames={trimEndFrames}
+        durationOverrideFrames={durationOverrideFrames}
+        onDurationResolve={handleDurationResolve}
       />
     )
   }
 }
 
-type VideoCanvasProps = Omit<VideoProps, "trim"> & VideoResolvedTrimProps
+type VideoCanvasProps = Omit<VideoProps, "trim"> &
+  VideoResolvedTrimProps & {
+    durationOverrideFrames?: number | null
+    onDurationResolve?: (frames: number) => void
+  }
 
-const VideoCanvas = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: VideoCanvasProps) => {
+const VideoCanvas = ({
+  video,
+  style,
+  trimStartFrames = 0,
+  trimEndFrames = 0,
+  durationOverrideFrames = null,
+  onDurationResolve,
+}: VideoCanvasProps) => {
   const resolvedVideo = useMemo(() => normalizeVideo(video), [video])
   const elementRef = useRef<HTMLVideoElement | null>(null);
   const currentFrame = useCurrentFrame()
@@ -239,8 +268,27 @@ const VideoCanvas = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: V
   const playingFlag = useRef(false)
   const pendingSeek = useRef<number | null>(null)
   const rawDuration = useMemo(() => video_length(resolvedVideo), [resolvedVideo])
-  const durationFrames = Math.max(0, rawDuration - trimStartFrames - trimEndFrames)
+  const [measuredDurationFrames, setMeasuredDurationFrames] = useState<number | null>(null)
+  useEffect(() => {
+    setMeasuredDurationFrames(null)
+  }, [resolvedVideo.path])
+  const effectiveDuration =
+    durationOverrideFrames ?? measuredDurationFrames ?? rawDuration
+  const durationFrames = Math.max(0, effectiveDuration - trimStartFrames - trimEndFrames)
   useProvideClipDuration(durationFrames)
+
+  const syncDurationFromElement = useCallback(() => {
+    if (rawDuration > 0) return
+    const el = elementRef.current
+    if (!el) return
+    const seconds = el.duration
+    if (!Number.isFinite(seconds) || seconds <= 0) return
+    const frames = Math.round(seconds * PROJECT_SETTINGS.fps)
+    if (!Number.isFinite(frames) || frames <= 0) return
+    setMeasuredDurationFrames((prev) => (prev === frames ? prev : frames))
+    videoLengthCache.set(resolvedVideo.path, frames)
+    onDurationResolve?.(frames)
+  }, [onDurationResolve, rawDuration, resolvedVideo.path])
 
   useEffect(() => {
     const el = elementRef.current
@@ -320,6 +368,7 @@ const VideoCanvas = ({ video, style, trimStartFrames = 0, trimEndFrames = 0 }: V
           el.currentTime = pendingSeek.current
           pendingSeek.current = null
         }
+        syncDurationFromElement()
       }}
       onEnded={() => elementRef.current?.pause()}
       style={style ? { ...baseStyle, ...style } : baseStyle}
