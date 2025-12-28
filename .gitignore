@@ -33,3 +33,6 @@ bin
 *.njsproj
 *.sln
 *.sw?
+
+# projects
+project/videos

@@ -8,7 +8,18 @@ pub fn resolve_path_to_string(input: &str) -> Result<String, Box<dyn Error>> {
     let mut path = PathBuf::from(tilde_expanded.as_ref());
 
     if !path.is_absolute() {
-        path = env::current_dir()?.join(path);
+        let base = env::var("FRAMESCRIPT_PROJECT_ROOT")
+            .ok()
+            .and_then(|p| {
+                let trimmed = p.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(PathBuf::from(trimmed))
+                }
+            })
+            .unwrap_or(env::current_dir()?);
+        path = base.join(path);
     }
 
     path = match dunce::canonicalize(&path) {

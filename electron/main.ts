@@ -131,16 +131,21 @@ function startBackend(): Promise<void> {
     return Promise.resolve();
   }
 
+  const backendEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...getBundledBinaryEnv(),
+  };
+  if (!backendEnv.FRAMESCRIPT_PROJECT_ROOT) {
+    backendEnv.FRAMESCRIPT_PROJECT_ROOT = process.cwd();
+  }
+
   if (!useBinaries) {
     const backendCwd = path.join(process.cwd(), "backend");
 
     backendProcess = spawn("cargo", ["run"], {
       cwd: backendCwd,
       stdio: "pipe",
-      env: {
-        ...process.env,
-        ...getBundledBinaryEnv(),
-      },
+      env: backendEnv,
     });
 
     console.log("[backend] spawn: cargo run (dev)");
@@ -156,10 +161,7 @@ function startBackend(): Promise<void> {
 
     backendProcess = spawn(info.path, [], {
       stdio: "pipe",
-      env: {
-        ...process.env,
-        ...getBundledBinaryEnv(),
-      },
+      env: backendEnv,
     });
 
     console.log("[backend] spawn:", info.path);
