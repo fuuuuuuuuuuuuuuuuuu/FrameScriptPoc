@@ -1,6 +1,26 @@
-## Instructions for AI agents
+## プロジェクト概要
 
-This project is a bundle of the FrameScript video editor & motion graphics tool and its project.
-The files the user should mainly edit are in the `project/` directory and `project/project.tsx`, while the FrameScript core and libraries are in `src/`.
-Please read the code under `src/` carefully and comprehensively.
-As a rule, it is preferable not to edit code under `src/` except for contributing to FrameScript. (If the user explicitly wants edits, follow that.)
+FrameScript - ビデオエディター & モーショングラフィックスツール
+
+## 重要なルール
+
+### ディレクトリ構造
+- `main/src/` 配下のコードは原則として編集しない（FrameScriptコアへのコントリビュート目的以外）
+- ユーザーが編集すべきファイルは `main/project/` 配下
+- ユーザーが明示的に編集を求めた場合はその指示に従う
+
+### Git操作
+- ファイルの追加・編集後、ユーザーの指示なしにコミットしない
+
+### コード品質
+- 後方互換性の名目で削除予定・未使用コードを残さない（残骸を検出したら削除する）
+- 未使用の変数・引数・関数・クラス・コメントアウト・到達不能分岐を残さない
+
+### ドキュメント
+- コメントやREADMEに進捗・完了宣言を書かない（例：「実装した」「完了」）
+- 日付や相対時制を書かない（例：「いつ実装した」「どのバージョンで追加」）
+- 実装状況チェックリストやステータス表を作成しない
+
+## パッケージマネージャー
+
+pnpm を使用
