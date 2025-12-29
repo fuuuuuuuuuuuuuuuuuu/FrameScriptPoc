@@ -39,6 +39,8 @@ project/videos/*
 !project/videos/.gitkeep
 project/sounds/*
 !project/sounds/.gitkeep
+project/voices/*
+!project/voices/.gitkeep
 
 # tmp
 /tmp
