@@ -3,6 +3,7 @@ import { seconds } from "../src/lib/frame"
 import { FillFrame } from "../src/lib/layout/fill-frame"
 import { Project, type ProjectSettings } from "../src/lib/project"
 import { TimeLine } from "../src/lib/timeline"
+import { Voice } from "../src/lib/voice"
 
 export const PROJECT_SETTINGS: ProjectSettings = {
   name: "framescript-template",
@@ -11,22 +12,19 @@ export const PROJECT_SETTINGS: ProjectSettings = {
   fps: 60,
 }
 
-const HelloScene = () => {
-  return (
-    <FillFrame style={{ alignItems: "center", justifyContent: "center" }}>
-      <div style={{ fontSize: 64, fontWeight: 600, color: "#f8fafc" }}>
-        Hello, world!
-      </div>
-    </FillFrame>
-  )
-}
-
 export const PROJECT = () => {
   return (
     <Project>
       <TimeLine>
-        <Clip label="Hello" duration={seconds(5)}>
-          <HelloScene />
+        <Clip label="Voice1" duration={seconds(2)}>
+          <FillFrame style={{ alignItems: "center", justifyContent: "center" }}>
+            <Voice>こんにちわなのだ</Voice>
+          </FillFrame>
+        </Clip>
+        <Clip label="Voice2" start={seconds(2)} duration={seconds(2)}>
+          <FillFrame style={{ alignItems: "center", justifyContent: "center" }}>
+            <Voice>元気にしてたか？</Voice>
+          </FillFrame>
         </Clip>
       </TimeLine>
     </Project>

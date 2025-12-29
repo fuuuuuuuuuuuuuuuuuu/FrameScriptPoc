@@ -1,3 +1,18 @@
 {
-  "voices": []
+  "voices": [
+    {
+      "key": "001de8b2220c9094",
+      "id": "voice_001",
+      "text": "こんにちわなのだ",
+      "speakerId": 3,
+      "params": {}
+    },
+    {
+      "key": "0002ff0f8172f511",
+      "id": "voice_002",
+      "text": "元気にしてたか？",
+      "speakerId": 3,
+      "params": {}
+    }
+  ]
 }
