@@ -35,5 +35,7 @@ bin
 *.sw?
 
 # projects
-project/videos
-project/audio
+project/videos/*
+!project/videos/.gitkeep
+project/sounds/*
+!project/sounds/.gitkeep
