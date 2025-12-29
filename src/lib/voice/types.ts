@@ -53,19 +53,39 @@ export interface VoiceProps {
 }
 
 /**
- * voice-map.json のエントリ
+ * Voice 情報収集用のエントリ（generate-voices で使用）
  */
-export interface VoiceMapEntry {
-  /** ハッシュキー */
-  key: string
-  /** 音声ファイル ID */
-  id: number
+export interface VoiceEntry {
   /** セリフテキスト */
   text: string
   /** 話者 ID */
   speakerId: number
   /** 音声パラメータ */
   params: AudioParams
+  /** ソースファイルパス（デバッグ用） */
+  file?: string
+  /** ソースファイル行番号（デバッグ用） */
+  line?: number
+}
+
+/**
+ * voice-map.json のエントリ
+ */
+export interface VoiceMapEntry {
+  /** ハッシュキー */
+  key: string
+  /** 音声ファイル ID (voice_001 形式) */
+  id: string
+  /** セリフテキスト */
+  text: string
+  /** 話者 ID */
+  speakerId: number
+  /** 音声パラメータ */
+  params: AudioParams
+  /** ソースファイルパス（デバッグ用） */
+  file?: string
+  /** ソースファイル行番号（デバッグ用） */
+  line?: number
 }
 
 /**

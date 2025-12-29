@@ -4,6 +4,7 @@
     "version": "0.0.3",
     "type": "module",
     "scripts": {
+        "generate-voices": "tsx --tsconfig tsconfig.app.json scripts/generate-voices.ts",
         "dev:vite": "vite --config vite.studio.config.ts",
         "build:vite": "vite build --config vite.studio.config.ts",
         "dev:render": "vite --config vite.render.config.ts",
@@ -36,6 +37,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^9.39.1",
+        "tsx": "^4.19.4",
         "@types/node": "^24.10.1",
         "@types/react": "^19.2.5",
         "@types/react-dom": "^19.2.3",

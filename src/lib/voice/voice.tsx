@@ -3,9 +3,9 @@ import { Sound } from "../sound/sound"
 import { FillFrame } from "../layout/fill-frame"
 import { generateVoiceKey } from "./voice-key"
 import type {
-  AudioParams,
   SubtitleConfig,
   VoiceProps,
+  VoiceEntry,
   VoiceMap,
 } from "./types"
 import voiceMapData from "../../../project/voice-map.json"
@@ -14,6 +14,55 @@ const voiceMap = voiceMapData as VoiceMap
 
 // 起動時に Map 化（O(1) ルックアップ）
 const voiceLookup = new Map(voiceMap.voices.map((v) => [v.key, v]))
+
+// ============================================
+// Voice 収集モード（generate-voices で使用）
+// ============================================
+
+/**
+ * Voice 情報収集用のレジストリ
+ */
+export const voiceRegistry: VoiceEntry[] = []
+
+/**
+ * 収集モードかどうかを判定
+ * Node.js 環境でのみ process.env を参照
+ */
+export function isCollectMode(): boolean {
+  return typeof process !== "undefined" && process.env?.VOICE_COLLECT === "true"
+}
+
+/**
+ * レジストリをクリア
+ */
+export function clearVoiceRegistry(): void {
+  voiceRegistry.length = 0
+}
+
+/**
+ * 呼び出し元のファイルパスと行番号を取得
+ */
+function getCallerLocation(): { file?: string; line?: number } {
+  const stack = new Error().stack
+  if (!stack) return {}
+
+  const lines = stack.split("\n")
+
+  // Voice コンポーネントの呼び出し元を探す（3行目以降）
+  for (let i = 2; i < lines.length; i++) {
+    const line = lines[i]
+    // project/ 配下のファイルを探す
+    const match = line.match(/\((.+?):(\d+):\d+\)$/)
+    if (match && match[1].includes("project/")) {
+      return {
+        file: match[1].replace(/^.*\/project\//, "project/"),
+        line: parseInt(match[2], 10),
+      }
+    }
+  }
+
+  return {}
+}
 
 /**
  * 字幕設定を正規化
@@ -77,8 +126,16 @@ export function Voice({
   subtitle = true,
 }: VoiceProps) {
   const text = children
-  const key = generateVoiceKey(text, speakerId, params)
 
+  // 収集モードの場合はレジストリに登録して終了
+  if (isCollectMode()) {
+    const { file, line } = getCallerLocation()
+    voiceRegistry.push({ text, speakerId, params, file, line })
+    return null
+  }
+
+  // 通常モード: 音声再生・字幕表示
+  const key = generateVoiceKey(text, speakerId, params)
   const entry = voiceLookup.get(key)
 
   if (!entry) {
