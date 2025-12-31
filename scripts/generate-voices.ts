@@ -54,6 +54,7 @@ interface AudioParams {
 }
 
 interface VoiceEntry {
+  displayText: string
   text: string
   speakerId: number
   params: AudioParams
@@ -194,6 +195,7 @@ function generateVoiceKey(
 interface VoiceMapEntry {
   key: string
   id: string
+  displayText: string
   text: string
   speakerId: number
   params: AudioParams
@@ -205,6 +207,7 @@ function generateVoiceMap(registry: VoiceEntry[]): { voices: VoiceMapEntry[] } {
   const voices = registry.map((entry, index) => ({
     key: generateVoiceKey(entry.text, entry.speakerId, entry.params),
     id: `voice_${String(index + 1).padStart(3, "0")}`,
+    displayText: entry.displayText,
     text: entry.text,
     speakerId: entry.speakerId,
     params: entry.params,

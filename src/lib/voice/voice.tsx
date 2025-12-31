@@ -1,12 +1,15 @@
-import type { CSSProperties } from "react"
+import type { CSSProperties, ReactNode } from "react"
+import { isValidElement, Children } from "react"
 import { Sound } from "../sound/sound"
 import { FillFrame } from "../layout/fill-frame"
 import { generateVoiceKey } from "./voice-key"
-import type {
-  SubtitleConfig,
-  VoiceProps,
-  VoiceEntry,
-  VoiceMap,
+import {
+  RUBY_SYMBOL,
+  type SubtitleConfig,
+  type VoiceProps,
+  type VoiceEntry,
+  type VoiceMap,
+  type RubyProps,
 } from "./types"
 import voiceMapData from "../../../project/voice-map.json"
 
@@ -62,6 +65,54 @@ function getCallerLocation(): { file?: string; line?: number } {
   }
 
   return {}
+}
+
+/**
+ * children を解析して表示テキストと読み上げテキストを抽出
+ */
+interface ParsedVoiceContent {
+  displayText: string // 字幕表示用
+  readingText: string // 音声生成用
+}
+
+function parseVoiceChildren(children: string | ReactNode): ParsedVoiceContent {
+  // Case 1: 単純な文字列（後方互換）
+  if (typeof children === "string") {
+    return { displayText: children, readingText: children }
+  }
+
+  // Case 2: ReactNode を解析
+  const displayParts: string[] = []
+  const readingParts: string[] = []
+
+  const processNode = (node: ReactNode): void => {
+    if (typeof node === "string") {
+      displayParts.push(node)
+      readingParts.push(node)
+    } else if (typeof node === "number") {
+      const str = String(node)
+      displayParts.push(str)
+      readingParts.push(str)
+    } else if (isValidElement(node)) {
+      // Ruby コンポーネントかチェック
+      if ((node.type as Record<symbol, boolean>)?.[RUBY_SYMBOL]) {
+        const props = node.props as RubyProps
+        displayParts.push(props.children)
+        readingParts.push(props.reading)
+      } else {
+        console.warn("[Voice] Unknown child element type:", node.type)
+      }
+    } else if (Array.isArray(node)) {
+      node.forEach(processNode)
+    }
+  }
+
+  Children.toArray(children).forEach(processNode)
+
+  return {
+    displayText: displayParts.join(""),
+    readingText: readingParts.join(""),
+  }
 }
 
 /**
@@ -125,28 +176,30 @@ export function Voice({
   params = {},
   subtitle = true,
 }: VoiceProps) {
-  const text = children
+  // children を解析して表示テキストと読み上げテキストを分離
+  const { displayText, readingText } = parseVoiceChildren(children)
 
   // 収集モードの場合はレジストリに登録して終了
   if (isCollectMode()) {
     const { file, line } = getCallerLocation()
-    voiceRegistry.push({ text, speakerId, params, file, line })
+    voiceRegistry.push({ displayText, text: readingText, speakerId, params, file, line })
     return null
   }
 
   // 通常モード: 音声再生・字幕表示
-  const key = generateVoiceKey(text, speakerId, params)
+  const key = generateVoiceKey(readingText, speakerId, params)
   const entry = voiceLookup.get(key)
 
   if (!entry) {
     console.error(
-      `[Voice] Audio not found: "${text}" (speakerId: ${speakerId}). Run 'npm run generate-voices' to generate.`,
+      `[Voice] Audio not found: "${readingText}" (speakerId: ${speakerId}). Run 'npm run generate-voices' to generate.`,
     )
     return null
   }
 
   const audioPath = `project/voices/${entry.id}.wav`
-  const subtitleConfig = normalizeSubtitle(subtitle, text)
+  // 字幕には表示テキストを使用
+  const subtitleConfig = normalizeSubtitle(subtitle, displayText)
 
   return (
     <>

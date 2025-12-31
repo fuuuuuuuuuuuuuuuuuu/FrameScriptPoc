@@ -1,4 +1,19 @@
-import type { CSSProperties } from "react"
+import type { CSSProperties, ReactNode } from "react"
+
+/**
+ * Ruby コンポーネント識別用シンボル
+ */
+export const RUBY_SYMBOL = Symbol("voice-ruby")
+
+/**
+ * Ruby コンポーネントの props
+ */
+export interface RubyProps {
+  /** 表示テキスト（字幕に表示） */
+  children: string
+  /** 読み上げテキスト（音声生成に使用） */
+  reading: string
+}
 
 /**
  * 音声パラメータ
@@ -42,8 +57,8 @@ export interface SubtitleConfig {
  * Voice コンポーネントの props
  */
 export interface VoiceProps {
-  /** セリフテキスト */
-  children: string
+  /** セリフテキストまたは Ruby を含む ReactNode */
+  children: string | ReactNode
   /** 話者 ID（VOICEVOX の speaker ID） */
   speakerId?: number
   /** 音声パラメータ */
@@ -56,7 +71,9 @@ export interface VoiceProps {
  * Voice 情報収集用のエントリ（generate-voices で使用）
  */
 export interface VoiceEntry {
-  /** セリフテキスト */
+  /** 表示テキスト（字幕用） */
+  displayText: string
+  /** 読み上げテキスト（音声生成用） */
   text: string
   /** 話者 ID */
   speakerId: number
@@ -76,7 +93,9 @@ export interface VoiceMapEntry {
   key: string
   /** 音声ファイル ID (voice_001 形式) */
   id: string
-  /** セリフテキスト */
+  /** 表示テキスト（字幕用） */
+  displayText: string
+  /** 読み上げテキスト（音声生成用） */
   text: string
   /** 話者 ID */
   speakerId: number
