@@ -1,20 +1,444 @@
 {
   "voices": [
     {
-      "key": "001de8b2220c9094",
+      "key": "00015b882aa1038e",
       "id": "voice_001",
-      "displayText": "こんにちわなのだ",
-      "text": "こんにちわなのだ",
+      "displayText": "対戦よろしくお願いします",
+      "text": "対戦よろしくお願いします",
       "speakerId": 3,
-      "params": {}
+      "params": {
+        "speed": 1.2
+      }
     },
     {
-      "key": "000eebd49640cfb1",
+      "key": "000eb4f2b194dd79",
       "id": "voice_002",
-      "displayText": "の名は刻まれし魔です",
-      "text": "の名はでもんすみすです",
+      "displayText": "こちらは名推理イシド、お相手はデモンスミス",
+      "text": "こちらは名推理イシド、お相手はデモンスミス",
       "speakerId": 3,
-      "params": {}
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000d6d046571ead8",
+      "id": "voice_003",
+      "displayText": "こちらの先行",
+      "text": "こちらの先行",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000b32e0241fd5e7",
+      "id": "voice_004",
+      "displayText": "スタンバイフェイズにプルリアをうたれたが特に問題なし",
+      "text": "スタンバイフェイズにプルリアをうたれたが特に問題なし",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00005325766fca24",
+      "id": "voice_005",
+      "displayText": "手札からラドリーを召喚",
+      "text": "てふだからラドリーを召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00093119d9744fd8",
+      "id": "voice_006",
+      "displayText": "召喚時効果で3枚墓地送り、マーレラいいね",
+      "text": "召喚時効果で3枚墓地送り、マーレラいいね",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00119d2773c1793d",
+      "id": "voice_007",
+      "displayText": "アヌビス効果で刻印を持つものをサーチ",
+      "text": "アヌビス効果で刻印を持つものをサーチ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0011f0418ed779da",
+      "id": "voice_008",
+      "displayText": "最後にバージェストマ二種を伏せてターン終了",
+      "text": "最後にバージェストマ二種を伏せてターン終了",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000d2b43f9833c25",
+      "id": "voice_009",
+      "displayText": "お相手のターン",
+      "text": "お相手のターン",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000e0bff177ae81d",
+      "id": "voice_010",
+      "displayText": "クォーツ効果でフュージョンサーチ、そのまま発動",
+      "text": "クォーツ効果でフュージョンサーチ、そのまま発動",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00107e1f74f41006",
+      "id": "voice_011",
+      "displayText": "これはディノミスクスで除外",
+      "text": "これはディノミスクスで除外",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000ff5583fbbc5a9",
+      "id": "voice_012",
+      "displayText": "チェーンしてマーレラ召喚",
+      "text": "チェーンしてマーレラ召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0013af9821e8434e",
+      "id": "voice_013",
+      "displayText": "お相手のネピリム召喚にチェーンしてマーレラ",
+      "text": "お相手のネピリム召喚にチェーンしてマーレラ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00076fd456aa230c",
+      "id": "voice_014",
+      "displayText": "それにチェーンしてディノミスクス召喚",
+      "text": "それにチェーンしてディノミスクス召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000542a8ec7be12f",
+      "id": "voice_015",
+      "displayText": "墓地に落とすのは次元障壁",
+      "text": "墓地に落とすのは次元障壁",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001be1f7e238bb80",
+      "id": "voice_016",
+      "displayText": "ロールバック発動、次元障壁で融合モンスターの効果を無効に",
+      "text": "ロールバック発動、次元障壁で融合モンスターの効果を無効に",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001d93a7aafef6f5",
+      "id": "voice_017",
+      "displayText": "お相手、それにチェーンしてヴォイドからのL召喚でファントム",
+      "text": "お相手、それにチェーンしてヴォイドからのりんくしょうかんでファントム",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001d3f561d3d613e",
+      "id": "voice_018",
+      "displayText": "L召喚時効果でディスパージをサーチして発動、クォーツサーチ",
+      "text": "りんくしょうかん時効果でディスパージをサーチして発動、クォーツサーチ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001da5b169ab7414",
+      "id": "voice_019",
+      "displayText": "ファントムでマーレラ破壊してターンエンド",
+      "text": "ファントムでマーレラ破壊してターンエンド",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00030ba1b26d83f8",
+      "id": "voice_020",
+      "displayText": "こちらのターン",
+      "text": "こちらのターン",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000769e7ea462482",
+      "id": "voice_021",
+      "displayText": "マーレラとラドリーでX召喚、オパビニア",
+      "text": "マーレラとラドリーでえくしーずしょうかん、オパビニア",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00062f5acb162db5",
+      "id": "voice_022",
+      "displayText": "オパビニア効果でレアンコイリアをサーチ",
+      "text": "オパビニア効果でレアンコイリアをサーチ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0000c3e242570ff6",
+      "id": "voice_023",
+      "displayText": "手札からマーレラ、それにチェーンして墓地のマーレラ",
+      "text": "てふだからマーレラ、それにチェーンして墓地のマーレラ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0017c75870a5a47d",
+      "id": "voice_024",
+      "displayText": "マーレラを特殊召喚",
+      "text": "マーレラを特殊召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0016304d26dee28b",
+      "id": "voice_025",
+      "displayText": "墓地に落とすのはトラップトリック",
+      "text": "墓地に落とすのはトラップトリック",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000867c3f1c3a5f8",
+      "id": "voice_026",
+      "displayText": "からのレアンコイリア、チェーンでマーレラ",
+      "text": "からのレアンコイリア、チェーンでマーレラ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001a51d57b206004",
+      "id": "voice_027",
+      "displayText": "マーレラを特殊召喚してロールバックを墓地に戻す",
+      "text": "マーレラを特殊召喚してロールバックを墓地に戻す",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0018066df73bf196",
+      "id": "voice_028",
+      "displayText": "刻印を持つものを召喚、聖域サーチ",
+      "text": "刻印を持つものを召喚、聖域サーチ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0008df783874343c",
+      "id": "voice_029",
+      "displayText": "そして発動、アポピスの邪神をセット",
+      "text": "そして発動、アポピスの邪神をセット",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000401cf0db7f91b",
+      "id": "voice_030",
+      "displayText": "からのアヌビスをサーチ",
+      "text": "からのアヌビスをサーチ",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001a64ae631303b2",
+      "id": "voice_031",
+      "displayText": "オパビニアとディノミスクスでL召喚、カンブリラスター",
+      "text": "オパビニアとディノミスクスでりんくしょうかん、カンブリラスター",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000f3037622d83e9",
+      "id": "voice_032",
+      "displayText": "邪神を墓地に送りレアンコイリアをセット",
+      "text": "邪神を墓地に送りレアンコイリアをセット",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0019c34ca29726db",
+      "id": "voice_033",
+      "displayText": "そして発動、マーレラを墓地にもどし、チェインしてレアンコイリア召喚",
+      "text": "そして発動、マーレラを墓地にもどし、チェインしてレアンコイリア召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001deda693cb926c",
+      "id": "voice_034",
+      "displayText": "ロールバック発動、トラップトリックで針虫をセットし発動",
+      "text": "ロールバック発動、トラップトリックではりむしをセットし発動",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00094418dfe0a661",
+      "id": "voice_035",
+      "displayText": "それにチェーンしてマーレラ召喚",
+      "text": "それにチェーンしてマーレラ召喚",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0007573dca590c64",
+      "id": "voice_036",
+      "displayText": "マーレラとレアンコイリアでオパビニア",
+      "text": "マーレラとレアンコイリアでオパビニア",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000c594c1d1df54b",
+      "id": "voice_037",
+      "displayText": "マーレラとカンブリラスターでギガンティック・スプライト",
+      "text": "マーレラとカンブリラスターでぎがんてぃっくすぷらいと",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001cf97de7ac3976",
+      "id": "voice_038",
+      "displayText": "墓地罠2枚戻してアヌビス",
+      "text": "墓地罠2枚戻してアヌビス",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0013b948d90ca711",
+      "id": "voice_039",
+      "displayText": "ギガンティック・スプライトとオパビニアでホープ・ゼアル",
+      "text": "ぎがんてぃっくすぷらいととオパビニアでほーぷぜある",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001f19e905dc7402",
+      "id": "voice_040",
+      "displayText": "墓地罠2枚戻してアヌビス、からのスペリオル",
+      "text": "墓地罠2枚戻してアヌビス、からのスペリオル",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001f7461472a2261",
+      "id": "voice_041",
+      "displayText": "効果でアヌビスを墓地に、からの墓地罠2枚戻してアヌビス×2",
+      "text": "効果でアヌビスを墓地に、からの墓地罠2枚戻してアヌビス×2",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00091efd309bfd1b",
+      "id": "voice_042",
+      "displayText": "アヌビス2体でヴァルドラス",
+      "text": "アヌビス2体でヴァルドラス",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001591c9c1f525e8",
+      "id": "voice_043",
+      "displayText": "バトルフェイズ、攻撃が10500になったゼアルで攻撃",
+      "text": "バトルフェイズ、攻撃が10500になったゼアルで攻撃",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001f7c768200d38f",
+      "id": "voice_044",
+      "displayText": "対戦ありがとうございました",
+      "text": "対戦ありがとうございました",
+      "speakerId": 3,
+      "params": {
+        "speed": 1.2
+      }
     }
   ]
 }
