@@ -3,14 +3,16 @@
     {
       "key": "001de8b2220c9094",
       "id": "voice_001",
+      "displayText": "こんにちわなのだ",
       "text": "こんにちわなのだ",
       "speakerId": 3,
       "params": {}
     },
     {
-      "key": "0002ff0f8172f511",
+      "key": "000eebd49640cfb1",
       "id": "voice_002",
-      "text": "元気にしてたか？",
+      "displayText": "の名は刻まれし魔です",
+      "text": "の名はでもんすみすです",
       "speakerId": 3,
       "params": {}
     }
