@@ -9,6 +9,15 @@
  * 5. 全て成功したら project/voices/ に移動
  */
 
+// project.tsx 内の video_length 等は localhost:3000 からメタデータを取得するが、
+// Voice 収集時はサーバーが起動していないため、モックで失敗させて 0 を返すようにする
+;(globalThis as any).XMLHttpRequest = class MockXMLHttpRequest {
+  status = 0
+  responseText = "{}"
+  open() {}
+  send() {}
+}
+
 import { renderToString } from "react-dom/server"
 import fs from "node:fs/promises"
 import path from "node:path"
@@ -131,14 +140,26 @@ async function collectVoices(): Promise<VoiceEntry[]> {
   // レジストリをクリア（再実行時のため）
   clearVoiceRegistry()
 
-  // プロジェクトと必要なコンテキストを動的インポート
   const { PROJECT } = await import("../project/project")
   const { WithCurrentFrame } = await import("../src/lib/frame")
+  const { StudioStateContext } = await import("../src/lib/studio-state")
+  const { Store } = await import("../src/util/state")
 
-  // SSR レンダリングで全 Voice を収集
-  // WithCurrentFrame でラップすることで Clip が useGlobalCurrentFrame を使える
+  // Video/Sound コンポーネントは StudioStateContext がないとエラーになるため、
+  // SSR 時にエラーを回避するためのダミー値を提供する
+  const mockStudioState = {
+    isPlaying: false,
+    setIsPlaying: () => {},
+    isPlayingStore: new Store(false),
+    isRender: false,
+  }
+
   renderToString(
-    createElement(WithCurrentFrame, null, createElement(PROJECT)),
+    createElement(
+      StudioStateContext.Provider,
+      { value: mockStudioState },
+      createElement(WithCurrentFrame, null, createElement(PROJECT)),
+    ),
   )
 
   // 収集結果をコピーして返す
