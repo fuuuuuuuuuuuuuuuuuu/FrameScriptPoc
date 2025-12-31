@@ -224,6 +224,83 @@ const frames = sound_length("assets/music.mp3")
 
 ---
 
+### `<Voice>`
+
+VOICEVOX 音声再生と字幕表示を行うコンポーネント。
+
+| 属性 | 型 | 必須 | デフォルト | 説明 |
+|------|-----|------|-----------|------|
+| `children` | `string \| ReactNode` | Yes | - | セリフテキストまたは `<Ruby>` を含む要素 |
+| `speakerId` | `number` | No | `3` | VOICEVOX の話者 ID（デフォルト: ずんだもん ノーマル） |
+| `params` | `AudioParams` | No | `{}` | 音声パラメータ |
+| `subtitle` | `boolean \| string \| SubtitleConfig` | No | `true` | 字幕設定 |
+
+```tsx
+// 基本（デフォルト: ずんだもん ノーマル）
+<Voice>こんにちわなのだ</Voice>
+
+// 話者 ID と音声パラメータ指定
+<Voice speakerId={2} params={{ speed: 1.2 }}>こんにちは</Voice>
+
+// 字幕位置カスタマイズ
+<Voice subtitle={{ position: "top" }}>こんにちわなのだ</Voice>
+
+// 字幕なし
+<Voice subtitle={false}>こんにちわなのだ</Voice>
+```
+
+#### AudioParams
+
+音声生成パラメータ。
+
+| 属性 | 型 | 説明 |
+|------|-----|------|
+| `speed` | `number` | 全体の話速 |
+| `pitch` | `number` | 全体の音高 |
+| `intonation` | `number` | 全体の抑揚 |
+| `volume` | `number` | 全体の音量 |
+| `prePhonemeLength` | `number` | 音声前の無音時間（秒） |
+| `postPhonemeLength` | `number` | 音声後の無音時間（秒） |
+| `pauseLength` | `number \| null` | 句読点などの無音時間（秒、null時は自動） |
+| `pauseLengthScale` | `number` | 句読点などの無音時間の倍率 |
+| `outputSamplingRate` | `number` | 出力サンプリングレート |
+| `outputStereo` | `boolean` | ステレオ出力するか |
+
+#### SubtitleConfig
+
+字幕表示設定。
+
+| 属性 | 型 | デフォルト | 説明 |
+|------|-----|-----------|------|
+| `text` | `string` | children から取得 | 字幕テキスト |
+| `position` | `"top" \| "center" \| "bottom"` | `"bottom"` | 字幕位置 |
+| `style` | `CSSProperties` | `{}` | 追加スタイル |
+
+---
+
+### `<Ruby>`
+
+`<Voice>` 内で表示テキストと読み上げテキストを分離するコンポーネント。
+
+| 属性 | 型 | 必須 | 説明 |
+|------|-----|------|------|
+| `children` | `string` | Yes | 表示テキスト（字幕に表示） |
+| `reading` | `string` | Yes | 読み上げテキスト（音声生成に使用） |
+
+```tsx
+// 基本
+<Voice>
+  <Ruby reading="でもんすみす">刻まれし魔</Ruby>
+</Voice>
+
+// テキストと混在
+<Voice>私の名は<Ruby reading="でもんすみす">刻まれし魔</Ruby>です</Voice>
+```
+
+字幕には「刻まれし魔」と表示され、音声は「でもんすみす」で生成される。
+
+---
+
 ### Trim
 
 トリム指定には2つの形式がある。
