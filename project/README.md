@@ -25,6 +25,8 @@ project/
 | `fps` | `number` | Yes | フレームレート |
 
 ```tsx
+import { type ProjectSettings } from "../src/lib/project"
+
 export const PROJECT_SETTINGS: ProjectSettings = {
   name: "my-project",
   width: 1920,
@@ -46,6 +48,9 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `children` | `ReactNode` | Yes | 子要素（通常は`<TimeLine>`） |
 
 ```tsx
+import { Project } from "../src/lib/project"
+import { TimeLine } from "../src/lib/timeline"
+
 <Project>
   <TimeLine>...</TimeLine>
 </Project>
@@ -62,6 +67,9 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `children` | `ReactNode` | No | 子要素（`<Clip>`, `<ClipSequence>`等） |
 
 ```tsx
+import { TimeLine } from "../src/lib/timeline"
+import { Clip } from "../src/lib/clip"
+
 <TimeLine>
   <Clip label="Intro">...</Clip>
 </TimeLine>
@@ -83,6 +91,9 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `onDurationChange` | `(frames: number) => void` | No | - | duration変更時コールバック |
 
 ```tsx
+import { Clip } from "../src/lib/clip"
+import { seconds } from "../src/lib/frame"
+
 <Clip label="Intro" duration={seconds(3)}>
   <IntroScene />
 </Clip>
@@ -103,6 +114,8 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `children` | `ReactNode` | No | 子要素 |
 
 ```tsx
+import { ClipStatic } from "../src/lib/clip"
+
 <ClipStatic start={0} end={119} label="Custom Range">
   <MyScene />
 </ClipStatic>
@@ -121,6 +134,9 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `onDurationChange` | `(frames: number) => void` | No | - | 合計duration変更時コールバック |
 
 ```tsx
+import { Clip, ClipSequence } from "../src/lib/clip"
+import { seconds } from "../src/lib/frame"
+
 <ClipSequence>
   <Clip label="A" duration={seconds(2)}>...</Clip>
   <Clip label="B" duration={seconds(3)}>...</Clip>
@@ -138,6 +154,8 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `children` | `ReactNode` | Yes | `<ClipStatic>` 要素 |
 
 ```tsx
+import { ClipStatic, Serial } from "../src/lib/clip"
+
 <Serial>
   <ClipStatic start={0} end={59} label="A">...</ClipStatic>
   <ClipStatic start={0} end={29} label="B">...</ClipStatic>
@@ -158,6 +176,8 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 デフォルトスタイル: `position: absolute`, `inset: 0`, `display: flex`, `flexDirection: column`
 
 ```tsx
+import { FillFrame } from "../src/lib/layout/fill-frame"
+
 <FillFrame style={{ alignItems: "center", justifyContent: "center" }}>
   <div>中央配置</div>
 </FillFrame>
@@ -178,6 +198,8 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 | `trim` | `Trim` | No | トリム設定 |
 
 ```tsx
+import { Video, video_length } from "../src/lib/video/video"
+
 <Video video="assets/demo.mp4" />
 <Video video={{ path: "assets/demo.mp4" }} trim={{ from: 30, duration: 120 }} />
 ```
@@ -187,6 +209,8 @@ export const PROJECT_SETTINGS: ProjectSettings = {
 動画の長さをフレーム数で取得。
 
 ```tsx
+import { video_length } from "../src/lib/video/video"
+
 const frames = video_length("assets/demo.mp4")
 ```
 
@@ -195,6 +219,8 @@ const frames = video_length("assets/demo.mp4")
 動画ソースのFPSを取得。
 
 ```tsx
+import { video_fps } from "../src/lib/video/video"
+
 const fps = video_fps("assets/demo.mp4")
 ```
 
@@ -210,6 +236,8 @@ const fps = video_fps("assets/demo.mp4")
 | `trim` | `Trim` | No | トリム設定 |
 
 ```tsx
+import { Sound, sound_length } from "../src/lib/sound/sound"
+
 <Sound sound="assets/music.mp3" />
 <Sound sound={{ path: "assets/music.mp3" }} trim={{ trimStart: 30 }} />
 ```
@@ -219,6 +247,8 @@ const fps = video_fps("assets/demo.mp4")
 音声の長さをフレーム数で取得。
 
 ```tsx
+import { sound_length } from "../src/lib/sound/sound"
+
 const frames = sound_length("assets/music.mp3")
 ```
 
@@ -236,6 +266,9 @@ VOICEVOX 音声再生と字幕表示を行うコンポーネント。
 | `subtitle` | `boolean \| string \| SubtitleConfig` | No | `true` | 字幕設定 |
 
 ```tsx
+import { Voice } from "../src/lib/voice"
+import type { AudioParams, SubtitleConfig } from "../src/lib/voice"
+
 // 基本（デフォルト: ずんだもん ノーマル）
 <Voice>こんにちわなのだ</Voice>
 
@@ -288,6 +321,8 @@ VOICEVOX 音声再生と字幕表示を行うコンポーネント。
 | `reading` | `string` | Yes | 読み上げテキスト（音声生成に使用） |
 
 ```tsx
+import { Voice, Ruby } from "../src/lib/voice"
+
 // 基本
 <Voice>
   <Ruby reading="でもんすみす">刻まれし魔</Ruby>
@@ -313,6 +348,8 @@ VOICEVOX 音声再生と字幕表示を行うコンポーネント。
 | | `duration` | `number` | 切り出すフレーム数 |
 
 ```tsx
+import { Video } from "../src/lib/video/video"
+
 // 形式1: 先頭30フレーム、末尾60フレームをカット
 <Video video="demo.mp4" trim={{ trimStart: 30, trimEnd: 60 }} />
 
@@ -338,9 +375,11 @@ VOICEVOX 音声再生と字幕表示を行うコンポーネント。
 | `get(frame)` | `(frame: number) => T` | 指定フレームの値を取得 |
 
 ```tsx
+import { useVariable, type Vec2, type Vec3 } from "../src/lib/animation"
+
 const opacity = useVariable(0)
-const position = useVariable({ x: 0, y: 0 })
-const pos3d = useVariable({ x: 0, y: 0, z: 0 })
+const position = useVariable({ x: 0, y: 0 } as Vec2)
+const pos3d = useVariable({ x: 0, y: 0, z: 0 } as Vec3)
 ```
 
 ---
@@ -368,6 +407,10 @@ const pos3d = useVariable({ x: 0, y: 0, z: 0 })
 | `ctx.parallel(handles[])` | 複数のアニメーションを並列実行 |
 
 ```tsx
+import { useVariable, useAnimation } from "../src/lib/animation"
+import { BEZIER_SMOOTH } from "../src/lib/animation/functions"
+import { seconds } from "../src/lib/frame"
+
 const position = useVariable({ x: -300, y: 0 })
 const opacity = useVariable(0)
 
@@ -396,7 +439,34 @@ return (
 
 ### イージング関数
 
-`../src/lib/animation/functions` からインポート。
+```tsx
+import {
+  // プリセット
+  BEZIER_EASE,
+  BEZIER_EASE_IN,
+  BEZIER_EASE_OUT,
+  BEZIER_EASE_IN_OUT,
+  BEZIER_SMOOTH,
+  BEZIER_SHARP,
+  BEZIER_ACCELERATE,
+  BEZIER_DECELERATE,
+  BEZIER_SNAPPY,
+  BEZIER_OVERSHOOT,
+  BEZIER_OVERSHOOT_SOFT,
+  BEZIER_OVERSHOOT_HARD,
+  // 関数
+  easeOutCubic,
+  easeInOutCubic,
+  easeOutExpo,
+  // ユーティリティ
+  cubicBezier,
+  clamp,
+  lerp,
+  frameProgress,
+  fadeInOut,
+  stagger,
+} from "../src/lib/animation/functions"
+```
 
 | 関数 | 説明 |
 |------|------|
@@ -456,6 +526,7 @@ const isActive = useClipActive()  // アクティブかつ表示中か
 
 ```tsx
 import { frameProgress, fadeInOut, stagger } from "../src/lib/animation/functions"
+import { seconds } from "../src/lib/frame"
 
 // フレーム進捗（0..1）
 const t = frameProgress(frame, startFrame, endFrame, easing)
