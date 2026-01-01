@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react"
-import { isValidElement, Children } from "react"
+import { isValidElement, Children, Fragment } from "react"
 import { Sound } from "../sound/sound"
 import { FillFrame } from "../layout/fill-frame"
 import { generateVoiceKey } from "./voice-key"
@@ -94,8 +94,12 @@ function parseVoiceChildren(children: string | ReactNode): ParsedVoiceContent {
       displayParts.push(str)
       readingParts.push(str)
     } else if (isValidElement(node)) {
-      // Ruby コンポーネントかチェック
-      if ((node.type as Record<symbol, boolean>)?.[RUBY_SYMBOL]) {
+      // br タグをチェック（<br>, <br/>, <br /> 全て対応）
+      if (node.type === "br") {
+        displayParts.push("\n")
+        // readingParts には追加しない（音声生成に改行は不要）
+      } else if ((node.type as Record<symbol, boolean>)?.[RUBY_SYMBOL]) {
+        // Ruby コンポーネント
         const props = node.props as RubyProps
         displayParts.push(props.children)
         readingParts.push(props.reading)
@@ -236,7 +240,12 @@ export function Voice({
               ...subtitleConfig.style,
             }}
           >
-            {subtitleConfig.text}
+            {subtitleConfig.text.split("\n").map((line, i, arr) => (
+              <Fragment key={i}>
+                {line}
+                {i < arr.length - 1 && <br />}
+              </Fragment>
+            ))}
           </div>
         </FillFrame>
       )}

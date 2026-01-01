@@ -280,6 +280,9 @@ import type { AudioParams, SubtitleConfig } from "../src/lib/voice"
 
 // 字幕なし
 <Voice subtitle={false}>こんにちわなのだ</Voice>
+
+// 字幕の改行（<br>, <br/>, <br /> すべて対応）
+<Voice>1行目<br />2行目</Voice>
 ```
 
 #### AudioParams
