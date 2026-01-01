@@ -147,7 +147,25 @@ const positionStyles: Record<
 > = {
   top: { top: "10%" },
   center: { top: "50%", transform: "translateX(-50%) translateY(-50%)" },
-  bottom: { bottom: "10%" },
+  bottom: { bottom: "3%" },
+}
+
+// デフォルト字幕スタイル（ゆっくり実況風）
+const defaultSubtitleStyle: CSSProperties = {
+  fontFamily: "'Noto Sans JP', sans-serif",
+  fontSize: "48px",
+  fontWeight: 900,
+  color: "white",
+  textShadow: `
+    4px 4px 0 #000,
+    -4px 4px 0 #000,
+    4px -4px 0 #000,
+    -4px -4px 0 #000,
+    4px 0 0 #000,
+    -4px 0 0 #000,
+    0 4px 0 #000,
+    0 -4px 0 #000
+  `,
 }
 
 /**
@@ -213,9 +231,7 @@ export function Voice({
               transform: "translateX(-50%)",
               width: "100%",
               textAlign: "center",
-              color: "white",
-              fontSize: "48px",
-              textShadow: "2px 2px 4px black",
+              ...defaultSubtitleStyle,
               ...positionStyles[subtitleConfig.position],
               ...subtitleConfig.style,
             }}
