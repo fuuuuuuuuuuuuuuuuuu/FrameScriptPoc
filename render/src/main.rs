@@ -71,7 +71,8 @@ async fn spawn_browser_instance(
             has_touch: false,
         })
         .request_timeout(Duration::from_hours(24))
-        .user_data_dir(user_data_dir); // ★ インスタンスごとに別のディレクトリ
+        .user_data_dir(user_data_dir) // ★ インスタンスごとに別のディレクトリ
+        .arg("--no-sandbox"); // root実行時に必要
 
     if let Some(path) = resolve_chromium_executable() {
         builder = builder.chrome_executable(path);

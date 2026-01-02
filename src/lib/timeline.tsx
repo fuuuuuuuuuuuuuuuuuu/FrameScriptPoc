@@ -165,7 +165,7 @@ export const TimeLine = ({ children }: TimeLineProps) => {
  */
 export const useTimelineClips = () => {
   const context = useContext(TimelineContext)
-  const clips = useSyncExternalStore(subscribeGlobal, getGlobalClips)
+  const clips = useSyncExternalStore(subscribeGlobal, getGlobalClips, getGlobalClips)
   if (context) {
     return context.clips
   }
@@ -198,7 +198,7 @@ export const useTimelineRegistration = () => {
  */
 export const useClipVisibilityState = () => {
   const context = useContext(TimelineContext)
-  const hidden = useSyncExternalStore(subscribeGlobal, getGlobalHidden)
+  const hidden = useSyncExternalStore(subscribeGlobal, getGlobalHidden, getGlobalHidden)
 
   if (context) {
     return {

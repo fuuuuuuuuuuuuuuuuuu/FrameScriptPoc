@@ -1,0 +1,5 @@
+services:
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-0.25.0
+    ports:
+      - "50021:50021"

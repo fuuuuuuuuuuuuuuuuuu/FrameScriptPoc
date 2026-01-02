@@ -1,0 +1,444 @@
+{
+  "voices": [
+    {
+      "key": "00086f9a54f8f309",
+      "id": "voice_001",
+      "displayText": "対戦よろしくお願いします",
+      "text": "対戦よろしくお願いします",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000d09e8128b0ac4",
+      "id": "voice_002",
+      "displayText": "こちらは名推理イシド、お相手はデモンスミス",
+      "text": "こちらは名推理イシド、お相手はデモンスミス",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000dce43a364a0c3",
+      "id": "voice_003",
+      "displayText": "こちらの先行",
+      "text": "こちらの先行",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0017a3e4355f2c92",
+      "id": "voice_004",
+      "displayText": "スタンバイフェイズにプルリアをうたれたが特に問題なし",
+      "text": "スタンバイフェイズにプルリアをうたれたが特に問題なし",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000ec10f2ea14d56",
+      "id": "voice_005",
+      "displayText": "手札からラドリーを召喚",
+      "text": "てふだからラドリーを召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0000af15598f146f",
+      "id": "voice_006",
+      "displayText": "召喚時効果で3枚墓地送り、マーレラいいね",
+      "text": "召喚時効果で3枚墓地送り、マーレラいいね",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0010c7721233edf3",
+      "id": "voice_007",
+      "displayText": "アヌビス効果で刻印を持つものをサーチ",
+      "text": "アヌビス効果で刻印を持つものをサーチ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0019182e0f2ceab0",
+      "id": "voice_008",
+      "displayText": "最後にバージェストマ二種を伏せてターン終了",
+      "text": "最後にバージェストマ二種を伏せてターン終了",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000b9c68ee4dc35e",
+      "id": "voice_009",
+      "displayText": "お相手のターン",
+      "text": "お相手のターン",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000de1e2e32bc60c",
+      "id": "voice_010",
+      "displayText": "クォーツ効果でフュージョンサーチ、そのまま発動",
+      "text": "クォーツ効果でフュージョンサーチ、そのまま発動",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000e8abbca1e27f7",
+      "id": "voice_011",
+      "displayText": "これはディノミスクスで除外",
+      "text": "これはディノミスクスで除外",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0017edd8d956a8bf",
+      "id": "voice_012",
+      "displayText": "チェーンしてマーレラ召喚",
+      "text": "チェーンしてマーレラ召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0007a9c694eb85f5",
+      "id": "voice_013",
+      "displayText": "お相手のネピリム召喚にチェーンしてマーレラ",
+      "text": "お相手のネピリム召喚にチェーンしてマーレラ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0017e3d22ff671f8",
+      "id": "voice_014",
+      "displayText": "それにチェーンしてディノミスクス召喚",
+      "text": "それにチェーンしてディノミスクス召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0007932fce2fd075",
+      "id": "voice_015",
+      "displayText": "墓地に落とすのは次元障壁",
+      "text": "墓地に落とすのは次元障壁",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001d9adead830f4e",
+      "id": "voice_016",
+      "displayText": "ロールバック発動、次元障壁で融合モンスターの効果を無効に",
+      "text": "ロールバック発動、次元障壁で融合モンスターの効果を無効に",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0000349f99e6501a",
+      "id": "voice_017",
+      "displayText": "お相手、それにチェーンしてヴォイドからのL召喚でファントム",
+      "text": "お相手、それにチェーンしてヴォイドからのりんくしょうかんでファントム",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00024e4764607914",
+      "id": "voice_018",
+      "displayText": "L召喚時効果でディスパージをサーチして発動、クォーツサーチ",
+      "text": "りんくしょうかん時効果でディスパージをサーチして発動、クォーツサーチ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000ade663186c381",
+      "id": "voice_019",
+      "displayText": "ファントムでマーレラ破壊してターンエンド",
+      "text": "ファントムでマーレラ破壊してターンエンド",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001565935338a578",
+      "id": "voice_020",
+      "displayText": "こちらのターン",
+      "text": "こちらのターン",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000c8bc656c39d48",
+      "id": "voice_021",
+      "displayText": "マーレラとラドリーでX召喚、オパビニア",
+      "text": "マーレラとラドリーでえくしーずしょうかん、オパビニア",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000e15ab08e42139",
+      "id": "voice_022",
+      "displayText": "オパビニア効果でレアンコイリアをサーチ",
+      "text": "オパビニア効果でレアンコイリアをサーチ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001a701a23593d38",
+      "id": "voice_023",
+      "displayText": "手札からマーレラ、それにチェーンして墓地のマーレラ",
+      "text": "てふだからマーレラ、それにチェーンして墓地のマーレラ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00119ccf2a2e8120",
+      "id": "voice_024",
+      "displayText": "マーレラを特殊召喚",
+      "text": "マーレラを特殊召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000553da8a34f00b",
+      "id": "voice_025",
+      "displayText": "墓地に落とすのはトラップトリック",
+      "text": "墓地に落とすのはトラップトリック",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001291628fbd7eb8",
+      "id": "voice_026",
+      "displayText": "からのレアンコイリア、チェーンでマーレラ",
+      "text": "からのレアンコイリア、チェーンでマーレラ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0007cfa8ebaa973b",
+      "id": "voice_027",
+      "displayText": "マーレラを特殊召喚してロールバックを墓地に戻す",
+      "text": "マーレラを特殊召喚してロールバックを墓地に戻す",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000732cc65047c46",
+      "id": "voice_028",
+      "displayText": "刻印を持つものを召喚、聖域サーチ",
+      "text": "刻印を持つものを召喚、聖域サーチ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0009c1bd89cee3f1",
+      "id": "voice_029",
+      "displayText": "そして発動、アポピスの邪神をセット",
+      "text": "そして発動、アポピスの邪神をセット",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001ff7811b5adc48",
+      "id": "voice_030",
+      "displayText": "からのアヌビスをサーチ",
+      "text": "からのアヌビスをサーチ",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0005fed7d03bf95e",
+      "id": "voice_031",
+      "displayText": "オパビニアとディノミスクスでL召喚、カンブリラスター",
+      "text": "オパビニアとディノミスクスでりんくしょうかん、カンブリラスター",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000748d8b014203c",
+      "id": "voice_032",
+      "displayText": "邪神を墓地に送りレアンコイリアをセット",
+      "text": "邪神を墓地に送りレアンコイリアをセット",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "00116f035be38f18",
+      "id": "voice_033",
+      "displayText": "そして発動、マーレラを墓地にもどし、チェインしてレアンコイリア召喚",
+      "text": "そして発動、マーレラを墓地にもどし、チェインしてレアンコイリア召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001ae04752d67245",
+      "id": "voice_034",
+      "displayText": "ロールバック発動、トラップトリックで針虫をセットし発動",
+      "text": "ロールバック発動、トラップトリックではりむしをセットし発動",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001798c4524ffef4",
+      "id": "voice_035",
+      "displayText": "それにチェーンしてマーレラ召喚",
+      "text": "それにチェーンしてマーレラ召喚",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0010c0955268d7d0",
+      "id": "voice_036",
+      "displayText": "マーレラとレアンコイリアでオパビニア",
+      "text": "マーレラとレアンコイリアでオパビニア",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000e7e0d2bf56565",
+      "id": "voice_037",
+      "displayText": "マーレラとカンブリラスターでギガンティック・スプライト",
+      "text": "マーレラとカンブリラスターでぎがんてぃっくすぷらいと",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0007a000376ccf94",
+      "id": "voice_038",
+      "displayText": "墓地罠2枚戻してアヌビス",
+      "text": "墓地罠2枚戻してアヌビス",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "000ca376c0404a18",
+      "id": "voice_039",
+      "displayText": "ギガンティック・スプライトとオパビニアでホープ・ゼアル",
+      "text": "ぎがんてぃっくすぷらいととオパビニアでほーぷぜある",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0019982bf817b3c0",
+      "id": "voice_040",
+      "displayText": "墓地罠2枚戻してアヌビス、からのスペリオル",
+      "text": "墓地罠2枚戻してアヌビス、からのスペリオル",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "001728025a182113",
+      "id": "voice_041",
+      "displayText": "効果でアヌビスを墓地に、からの墓地罠2枚戻してアヌビス×2",
+      "text": "効果でアヌビスを墓地に、からの墓地罠2枚戻してアヌビス×2",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0006c2d0877f9aad",
+      "id": "voice_042",
+      "displayText": "アヌビス2体でヴァルドラス",
+      "text": "アヌビス2体でヴァルドラス",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0018558f312006fe",
+      "id": "voice_043",
+      "displayText": "バトルフェイズ、攻撃が10500になったゼアルで攻撃",
+      "text": "バトルフェイズ、攻撃が10500になったゼアルで攻撃",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    },
+    {
+      "key": "0017e223871cf39a",
+      "id": "voice_044",
+      "displayText": "対戦ありがとうございました",
+      "text": "対戦ありがとうございました",
+      "speakerId": 108,
+      "params": {
+        "speed": 1.2
+      }
+    }
+  ]
+}
