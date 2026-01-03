@@ -130,6 +130,24 @@ async fn wait_for_animation_ready(page: &Page) {
     page.evaluate(script).await.unwrap();
 }
 
+async fn wait_for_audio_plan_ready(page: &Page) {
+    let script = r#"
+        (async () => {
+          const start = Date.now();
+          while (true) {
+            const api = window.__frameScript;
+            if (api && api.audioPlanReady === true) return true;
+            if (Date.now() - start > 10000) {
+              // Timeout after 10 seconds, proceed anyway
+              return false;
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+        })()
+    "#;
+    page.evaluate(script).await.unwrap();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = std::env::args().collect::<Vec<String>>();
@@ -286,6 +304,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             page.wait_for_navigation().await.unwrap();
             wait_for_frame_api(&page).await;
             wait_for_animation_ready(&page).await;
+            wait_for_audio_plan_ready(&page).await;
 
             for frame in start..end {
                 wait_for_next_frame(&page).await;
